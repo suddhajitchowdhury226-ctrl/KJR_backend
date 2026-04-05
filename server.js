@@ -25,7 +25,7 @@ app.use(cors({
       'http://127.0.0.1:3000',
       'null', // file:// pages send "null" as origin string
     ];
-    if (!origin || origin === 'null' || allowedOrigins.includes(origin)) {
+    if (!origin || origin === 'null' || allowedOrigins.includes(origin) || /\.vercel\.app$/.test(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
