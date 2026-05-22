@@ -198,6 +198,36 @@ router.get('/categories', (req, res) => {
   res.json({ categories: PRODUCT_CATEGORIES });
 });
 
+// Try Gemini with automatic model fallback and retry on 503 overload
+async function callGeminiWithFallback(chatHistory) {
+  const models = ['gemini-2.5-flash', 'gemini-1.5-flash'];
+  const maxRetries = 2;
+  const retryDelayMs = 2000;
+
+  for (const model of models) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: chatHistory,
+        });
+        return response.text;
+      } catch (err) {
+        const msg = err?.message || '';
+        const is503 = err?.status === 503 || msg.includes('503') || msg.includes('high demand') || msg.includes('UNAVAILABLE');
+        console.warn(`Gemini [${model}] attempt ${attempt} failed: ${msg}`);
+
+        if (is503 && attempt < maxRetries) {
+          await new Promise(r => setTimeout(r, retryDelayMs));
+          continue;
+        }
+        break; // try next model
+      }
+    }
+  }
+  throw new Error('Bunji is experiencing high demand right now. Please try again in a moment.');
+}
+
 router.post('/message', async (req, res) => {
   try {
     if (!process.env.GEMINI_API_KEY) {
@@ -226,24 +256,15 @@ router.post('/message', async (req, res) => {
       sessions[sessionId] = chatHistory;
     }
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: chatHistory,
-    });
-
-    const reply = response.text;
+    const reply = await callGeminiWithFallback(chatHistory);
 
     // Push model reply
     sessions[sessionId].push({ role: 'model', parts: [{ text: reply }] });
 
     res.json({ reply });
   } catch (error) {
-    console.error("Gemini Error full:", JSON.stringify(error?.message || error, null, 2));
-    const errMsg = error?.message || String(error);
-    res.status(500).json({
-      error: "Failed to communicate with AI",
-      detail: errMsg
-    });
+    console.error("Gemini Error:", error?.message || error);
+    res.status(500).json({ error: error?.message || "Failed to communicate with AI" });
   }
 });
 
