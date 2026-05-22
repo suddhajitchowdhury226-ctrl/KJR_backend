@@ -200,9 +200,9 @@ router.get('/categories', (req, res) => {
 
 // Try Gemini with automatic model fallback and retry on 503 overload
 async function callGeminiWithFallback(chatHistory) {
-  const models = ['gemini-2.5-flash', 'gemini-1.5-flash'];
-  const maxRetries = 2;
-  const retryDelayMs = 2000;
+  const models = ['gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-1.5-flash-8b'];
+  const maxRetries = 3;
+  const retryDelayMs = 3000;
 
   for (const model of models) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
