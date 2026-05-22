@@ -2,7 +2,92 @@ const express = require('express');
 const router = express.Router();
 const { GoogleGenAI } = require('@google/genai');
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }); // Requires GEMINI_API_KEY in .env
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+// Full HVAC product category list
+const PRODUCT_CATEGORIES = [
+  "Accumulators & Receivers",
+  "Adhesives",
+  "Air Cleaners",
+  "Air Filters",
+  "Airflow Accessories",
+  "Blower Components",
+  "Brazing & Soldering Supplies",
+  "Brazing & Soldering Tools",
+  "Capacitors",
+  "Caulking & Sealants",
+  "Cleaners & Chemicals",
+  "Coils",
+  "Compressor Parts",
+  "Compressors",
+  "Condensate Drain Supplies",
+  "Condensate Pumps",
+  "Condenser Fan Motors",
+  "Connected Home",
+  "Construction Supplies",
+  "Diffusers",
+  "Double Shaft Motors",
+  "Draft Inducer Motors",
+  "Ducting & Sheet Metal",
+  "Electrical",
+  "Electrical Controls",
+  "Evaporator and Blower Motors",
+  "Exhaust & Supply Fans",
+  "Fan Blades",
+  "Fasteners",
+  "Filter - Driers",
+  "Fittings",
+  "Gas Heat Controls",
+  "Grilles",
+  "Hand Tools",
+  "Heat & Energy Recovery Ventilation",
+  "Heat Pump Controls",
+  "Inspection Tools",
+  "Line Sets",
+  "Miscellaneous Components",
+  "Moisture Control & Zoning",
+  "Motor Accessories",
+  "Mounting Supplies",
+  "Non-HVAC Items",
+  "Oil Heat Controls",
+  "Other Miscellaneous Installation Supplies",
+  "Other Specialty Tools",
+  "Pipe",
+  "Power Tools",
+  "Registers",
+  "Refrigerant",
+  "Residential Air Handlers",
+  "Residential Coils",
+  "Residential Equipment",
+  "Residential Equipment Accessories",
+  "Residential Mini Split Accessories",
+  "Safety",
+  "Service Tools",
+  "Super Accessories",
+  "Tape",
+  "Test Tools",
+  "Thermostat Guards & Thermostat Accessories",
+  "Thermostats",
+  "Tool Storage",
+  "Ultraviolet",
+  "Unit Heaters",
+  "Valves",
+  "Ventilators & Accessories",
+  "Water Heaters"
+];
+
+// Build the numbered product list string for display in chat
+function buildProductList() {
+  let list = "📦 *KJ Appliance Parts — Product Categories*\n";
+  list += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+  PRODUCT_CATEGORIES.forEach((cat, index) => {
+    list += `${index + 1}. ${cat}\n`;
+  });
+  list += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+  list += "\n👉 Type the *number* of the category you want to browse.\n";
+  list += "Example: Type **3** for Air Cleaners";
+  return list;
+}
 
 const SYSTEM_INSTRUCTION = `
 You are Bunji, the virtual advisor for KJRID.
@@ -14,7 +99,11 @@ Password: (same as account number) -> Do not change the password.
 My Account section provides reports (order status, backorders, credit status, invoices).
 The Encompass credit account is linked to the Bank of America Checking account Merchants online service.
 
+Here is the full numbered product category list (used when user presses 5):
+${PRODUCT_CATEGORIES.map((cat, i) => `${i + 1}. ${cat}`).join('\n')}
+
 Follow this interaction flow VERY STRICTLY:
+
 1. When starting a conversation, always greet exactly:
    "Hello my name is Bunji, your virtual advisor
    PRESS # 1 for English
@@ -24,37 +113,102 @@ Follow this interaction flow VERY STRICTLY:
    For KJ Remodeling, PRESS # 4
    For KJ Appliance Parts, PRESS # 5"
 
-2. If user replies "3": 
+2. If user replies "1":
+   Confirm English is selected and repeat the main menu options 3, 4, 5.
+
+3. If user replies "2":
+   Switch to Spanish and repeat the main menu options 3, 4, 5 in Spanish.
+
+4. If user replies "3": 
    Send them the link for KJ Property Management web site information.
    
-3. If user replies "4": 
+5. If user replies "4": 
    Send them the link for KJ Work Force, Career Moves and Bid Projects web site information.
 
-4. If user replies "5":
-   Say: 
-   "KJRID is your Appliance Parts Dealer (A Partner with Encompass)
-   First you must log into your account or create an account if you do not have one.
-   Before we continue, please enter your Parts Model Number now?"
+6. If user replies "5":
+   Say exactly:
+   "Welcome to KJ Appliance Parts! 🛒
+   KJRID is your Appliance Parts Dealer — A Partner with Encompass.
+   
+   First, please log into your account at www.encompass.com or create one if you don't have one yet.
+   
+   Below are our product categories. Type the NUMBER of the category you want to browse:"
+   
+   Then display the FULL numbered product category list exactly as provided above (all 68 categories, numbered 1 through 68).
+   
+   End with: "👉 Type the number of the category you want, or type 0 to go back to the main menu."
 
-5. Once they enter a model number, ask:
-   "To help us find your part, please tell me which part you are looking for?
-   Options: Home Appliance, HVAC, Commercial Appliance, Consumer electronics, Computer and Tablet, Coffee & small Appliance, HVAC Truck Stock, Grills & Outdoor Kitchen, Vacuum, Print Imaging, Household Cleaners, Pool & Spa, Lawn & Garden, Power Tools, Mobile Parts & Accessories, Installation Supplies, Plumbing, Home Maintenance, Fitness, Accessories, Service Aids & Tools, Personal Care, Health & Wellness, Auto & Garage, Repair and return Service"
+7. When user types a number between 1 and 68 (after seeing the product list):
+   Identify the category name from the list.
+   Say:
+   "Great choice! You selected: [CATEGORY NAME]
+   
+   🛍️ *BUY OPTIONS for [CATEGORY NAME]:*
+   
+   To purchase parts in this category, here's how:
+   1️⃣  Visit www.encompass.com and log in with:
+       • Username: 312446
+       • Password: 312446
+   2️⃣  Search for [CATEGORY NAME] parts
+   3️⃣  Add items to your cart and checkout
+   
+   OR let me help you find a specific part right now!
+   
+   Please enter your Parts Model Number to search for a specific part in [CATEGORY NAME]:"
 
-6. Once they provide the part type, ask:
-   "Thank you; there is just one more thing, We provide Parts from Over 350 Manufacturers please view all Brands and choose one? Millions of 100% genuine parts are available for fast shipping from all of your trusted brands."
+8. Once they enter a model number, ask:
+   "Thank you! Searching for [MODEL NUMBER] in [CATEGORY NAME]...
+   
+   To confirm, which specific part are you looking for?
+   Please describe the part or choose from common options for this category."
 
-7. Once they provide a brand, simulate finding the part. If simulated found:
-   Ask: "We found your part. How many do you need?" 
-   When they reply with quantity, say: "Your item is added into your cart. Your cost before shipping: [Simulate a price]. Can I help you find another part? (YES / NO)"
-   If YES -> go back to Option #5 flow.
-   If NO -> "Ready to check out. Please provide all of your billing information"
+9. Once they provide the part description, ask:
+   "We have millions of 100% genuine parts from over 350 manufacturers.
+   Please choose your preferred brand, or type 'Any' to see all available brands for your part."
 
-   If simulated not found:
-   "We did not find your part. We need more information to find your part? Please enter detailed information about your part you are looking for in the field below?"
+10. Once they provide a brand:
+    Simulate finding the part. If simulated found:
+    "✅ Great news! We found your part.
+    
+    📦 Part Details:
+    • Category: [CATEGORY]
+    • Model: [MODEL NUMBER]  
+    • Brand: [BRAND]
+    • Part: [PART DESCRIPTION]
+    • Estimated Price: $[SIMULATED PRICE]
+    
+    How many units do you need?"
+    
+    When they reply with quantity:
+    "🛒 Added to cart!
+    
+    • Item: [PART] x [QUANTITY]
+    • Subtotal (before shipping): $[TOTAL]
+    
+    Would you like to find another part? (YES / NO)"
+    
+    If YES → go back to step 7 (show category list again).
+    If NO → "Ready to checkout! Please visit www.encompass.com to complete your purchase, or provide your billing information below to proceed."
+
+    If simulated not found:
+    "❌ We could not find that exact part. Please provide more detailed information about the part you are looking for (part number, description, dimensions, etc.) and we will search again."
+
+11. If user types "0" at any point → return to the main menu greeting.
+
+IMPORTANT RULES:
+- When displaying the product category list, ALWAYS show ALL 68 categories numbered 1-68. Never truncate or summarize the list.
+- When a user types a number 1-68 after seeing the product list, treat it as a category selection.
+- Always be helpful, friendly, and guide the user step by step.
+- Keep track of the selected category throughout the conversation.
 `;
 
-// Helper: store chat histories in memory (for dev purposes, production would use DB/redis)
+// Helper: store chat histories in memory
 const sessions = {};
+
+// Endpoint: return categories list as JSON (used by frontend to render clickable buttons)
+router.get('/categories', (req, res) => {
+  res.json({ categories: PRODUCT_CATEGORIES });
+});
 
 router.post('/message', async (req, res) => {
   try {
@@ -68,20 +222,20 @@ router.post('/message', async (req, res) => {
     }
 
     if (!sessions[sessionId]) {
-      // Initialize new session history with system prompt
       sessions[sessionId] = [
         { role: 'user', parts: [{ text: "SYSTEM PROMPT: " + SYSTEM_INSTRUCTION }] },
-        { role: 'model', parts: [{ text: "Understood. I am Bunji." }] }
+        { role: 'model', parts: [{ text: "Understood. I am Bunji, ready to assist." }] }
       ];
     }
 
-    // append user message
+    // Append user message
     sessions[sessionId].push({ role: 'user', parts: [{ text: message }] });
 
-    // Ensure we don't exceed a massive list, keep last 20 messages + system prompt
+    // Keep last 30 messages + system prompt to handle longer product flows
     let chatHistory = sessions[sessionId];
-    if (chatHistory.length > 22) {
-      chatHistory = [chatHistory[0], chatHistory[1], ...chatHistory.slice(-20)];
+    if (chatHistory.length > 32) {
+      chatHistory = [chatHistory[0], chatHistory[1], ...chatHistory.slice(-30)];
+      sessions[sessionId] = chatHistory;
     }
 
     const response = await ai.models.generateContent({
@@ -90,8 +244,8 @@ router.post('/message', async (req, res) => {
     });
 
     const reply = response.text;
-    
-    // push model reply
+
+    // Push model reply
     sessions[sessionId].push({ role: 'model', parts: [{ text: reply }] });
 
     res.json({ reply });
