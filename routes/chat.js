@@ -61,7 +61,6 @@ CATEGORY FLOW (after user clicks a category button, message starts with "Selecte
 If part not found → ask for more details (part number, dimensions, etc.)
 
 BRANDS: "We carry 350+ brands! Type 'brands' to browse A-Z."
-VERTICALS: "We cover 18 departments! Type 'vertical' to browse by department."
 
 Rules: Be friendly, concise, guide step by step. Track selected category throughout conversation.`;
 
