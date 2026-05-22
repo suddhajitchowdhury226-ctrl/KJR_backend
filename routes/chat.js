@@ -6,266 +6,136 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // Full HVAC product category list
 const PRODUCT_CATEGORIES = [
-  "Accumulators & Receivers",
-  "Adhesives",
-  "Air Cleaners",
-  "Air Filters",
-  "Airflow Accessories",
-  "Blower Components",
-  "Brazing & Soldering Supplies",
-  "Brazing & Soldering Tools",
-  "Capacitors",
-  "Caulking & Sealants",
-  "Cleaners & Chemicals",
-  "Coils",
-  "Compressor Parts",
-  "Compressors",
-  "Condensate Drain Supplies",
-  "Condensate Pumps",
-  "Condenser Fan Motors",
-  "Connected Home",
-  "Construction Supplies",
-  "Diffusers",
-  "Double Shaft Motors",
-  "Draft Inducer Motors",
-  "Ducting & Sheet Metal",
-  "Electrical",
-  "Electrical Controls",
-  "Evaporator and Blower Motors",
-  "Exhaust & Supply Fans",
-  "Fan Blades",
-  "Fasteners",
-  "Filter - Driers",
-  "Fittings",
-  "Gas Heat Controls",
-  "Grilles",
-  "Hand Tools",
-  "Heat & Energy Recovery Ventilation",
-  "Heat Pump Controls",
-  "Inspection Tools",
-  "Line Sets",
-  "Miscellaneous Components",
-  "Moisture Control & Zoning",
-  "Motor Accessories",
-  "Mounting Supplies",
-  "Non-HVAC Items",
-  "Oil Heat Controls",
-  "Other Miscellaneous Installation Supplies",
-  "Other Specialty Tools",
-  "Pipe",
-  "Power Tools",
-  "Registers",
-  "Refrigerant",
-  "Residential Air Handlers",
-  "Residential Coils",
-  "Residential Equipment",
-  "Residential Equipment Accessories",
-  "Residential Mini Split Accessories",
-  "Safety",
-  "Service Tools",
-  "Super Accessories",
-  "Tape",
-  "Test Tools",
-  "Thermostat Guards & Thermostat Accessories",
-  "Thermostats",
-  "Tool Storage",
-  "Ultraviolet",
-  "Unit Heaters",
-  "Valves",
-  "Ventilators & Accessories",
-  "Water Heaters"
+  "Accumulators & Receivers", "Adhesives", "Air Cleaners", "Air Filters",
+  "Airflow Accessories", "Blower Components", "Brazing & Soldering Supplies",
+  "Brazing & Soldering Tools", "Capacitors", "Caulking & Sealants",
+  "Cleaners & Chemicals", "Coils", "Compressor Parts", "Compressors",
+  "Condensate Drain Supplies", "Condensate Pumps", "Condenser Fan Motors",
+  "Connected Home", "Construction Supplies", "Diffusers", "Double Shaft Motors",
+  "Draft Inducer Motors", "Ducting & Sheet Metal", "Electrical",
+  "Electrical Controls", "Evaporator and Blower Motors", "Exhaust & Supply Fans",
+  "Fan Blades", "Fasteners", "Filter - Driers", "Fittings", "Gas Heat Controls",
+  "Grilles", "Hand Tools", "Heat & Energy Recovery Ventilation",
+  "Heat Pump Controls", "Inspection Tools", "Line Sets", "Miscellaneous Components",
+  "Moisture Control & Zoning", "Motor Accessories", "Mounting Supplies",
+  "Non-HVAC Items", "Oil Heat Controls", "Other Miscellaneous Installation Supplies",
+  "Other Specialty Tools", "Pipe", "Power Tools", "Registers", "Refrigerant",
+  "Residential Air Handlers", "Residential Coils", "Residential Equipment",
+  "Residential Equipment Accessories", "Residential Mini Split Accessories",
+  "Safety", "Service Tools", "Super Accessories", "Tape", "Test Tools",
+  "Thermostat Guards & Thermostat Accessories", "Thermostats", "Tool Storage",
+  "Ultraviolet", "Unit Heaters", "Valves", "Ventilators & Accessories", "Water Heaters"
 ];
 
-// Build the numbered product list string for display in chat
-function buildProductList() {
-  let list = "📦 *KJ Appliance Parts — Product Categories*\n";
-  list += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
-  PRODUCT_CATEGORIES.forEach((cat, index) => {
-    list += `${index + 1}. ${cat}\n`;
-  });
-  list += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
-  list += "\n👉 Type the *number* of the category you want to browse.\n";
-  list += "Example: Type **3** for Air Cleaners";
-  return list;
-}
+// Compact system instruction — no duplicate product list, concise rules
+const SYSTEM_INSTRUCTION = `You are Bunji, virtual advisor for KJRID (KJ Remodeling Interior Designs).
+KJRID is a dealer for Encompass Simply Parts (www.encompass.com), account #312446.
+Wholesale pricing: log in at www.encompass.com — Username: 312446, Password: 312446.
+My Account has order status, backorders, credit status, invoices.
 
-const SYSTEM_INSTRUCTION = `
-You are Bunji, the virtual advisor for KJRID.
-KJRID is a dealer for Encompass Simply Parts (www.encompass.com).
-KJRID account number is 312446, which accepts our business credit card.
-To view wholesale pricing, users must log into www.encompass.com using the Sign In icon.
-Username: 312446
-Password: (same as account number) -> Do not change the password.
-My Account section provides reports (order status, backorders, credit status, invoices).
-The Encompass credit account is linked to the Bank of America Checking account Merchants online service.
+MENU FLOW:
+On first message, greet exactly:
+"Hello my name is Bunji, your virtual advisor
+PRESS # 1 for English
+PRESS # 2 for Spanish
+For KJ Property Management, PRESS # 3
+For KJ Remodeling, PRESS # 4
+For KJ Appliance Parts, PRESS # 5"
 
-Here is the full numbered product category list (used when user presses 5):
-${PRODUCT_CATEGORIES.map((cat, i) => `${i + 1}. ${cat}`).join('\n')}
+- "1" → confirm English, show options 3/4/5
+- "2" → switch to Spanish, show options 3/4/5 in Spanish
+- "3" → share KJ Property Management website info
+- "4" → share KJ Workforce/Career/Bid Projects website info
+- "5" → UI shows category grid automatically. Just say: "Please select a category from the list above. 👆"
+- "0" → return to main menu greeting
 
-Follow this interaction flow VERY STRICTLY:
+CATEGORY FLOW (after user clicks a category button, message starts with "Selected: "):
+1. Acknowledge selection, invite them to browse or enter a model number
+2. On model number → ask which specific part they need
+3. On part description → ask preferred brand (or "Any")
+4. On brand → simulate finding part, show details with estimated price, ask quantity
+5. On quantity → show cart summary, ask YES/NO for another part
+   - YES → show category prompt again
+   - NO → direct to www.encompass.com to complete purchase
 
-1. When starting a conversation, always greet exactly:
-   "Hello my name is Bunji, your virtual advisor
-   PRESS # 1 for English
-   PRESS # 2 for Spanish
-   (In Preferred Language)
-   For KJ Property Management, PRESS # 3
-   For KJ Remodeling, PRESS # 4
-   For KJ Appliance Parts, PRESS # 5"
+If part not found → ask for more details (part number, dimensions, etc.)
 
-2. If user replies "1":
-   Confirm English is selected and repeat the main menu options 3, 4, 5.
+BRANDS: "We carry 350+ brands! Type 'brands' to browse A-Z."
+VERTICALS: "We cover 18 departments! Type 'vertical' to browse by department."
 
-3. If user replies "2":
-   Switch to Spanish and repeat the main menu options 3, 4, 5 in Spanish.
+Rules: Be friendly, concise, guide step by step. Track selected category throughout conversation.`;
 
-4. If user replies "3": 
-   Send them the link for KJ Property Management web site information.
-   
-5. If user replies "4": 
-   Send them the link for KJ Work Force, Career Moves and Bid Projects web site information.
-
-6. If user replies "5":
-   The frontend UI automatically handles this — it shows the full product category grid as clickable buttons.
-   Do NOT respond with a product list or ask for a model number.
-   Simply say: "Please select a category from the list above to browse products. 👆"
-
-7. When user sends a message like "Selected: [CATEGORY NAME]" (which means they clicked a category button in the UI):
-   Acknowledge the selection and say:
-   "Great choice! You selected [CATEGORY NAME]. 
-   
-   🛍️ Browse the products shown above and click BUY on any item you want.
-   
-   Need help finding a specific part? Enter your model number and I'll help you search!"
-
-8. Once they enter a model number, ask:
-   "Thank you! Searching for [MODEL NUMBER] in [CATEGORY NAME]...
-   
-   To confirm, which specific part are you looking for?
-   Please describe the part or choose from common options for this category."
-
-9. Once they provide the part description, ask:
-   "We have millions of 100% genuine parts from over 350 manufacturers.
-   Please choose your preferred brand, or type 'Any' to see all available brands for your part."
-
-10. Once they provide a brand:
-    Simulate finding the part. If simulated found:
-    "✅ Great news! We found your part.
-    
-    📦 Part Details:
-    • Category: [CATEGORY]
-    • Model: [MODEL NUMBER]  
-    • Brand: [BRAND]
-    • Part: [PART DESCRIPTION]
-    • Estimated Price: $[SIMULATED PRICE]
-    
-    How many units do you need?"
-    
-    When they reply with quantity:
-    "🛒 Added to cart!
-    
-    • Item: [PART] x [QUANTITY]
-    • Subtotal (before shipping): $[TOTAL]
-    
-    Would you like to find another part? (YES / NO)"
-    
-    If YES → go back to step 7 (show category list again).
-    If NO → "Ready to checkout! Please visit www.encompass.com to complete your purchase, or provide your billing information below to proceed."
-
-    If simulated not found:
-    "❌ We could not find that exact part. Please provide more detailed information about the part you are looking for (part number, description, dimensions, etc.) and we will search again."
-
-11. If user types "0" at any point → return to the main menu greeting.
-
-12. If user asks about brands or manufacturers:
-    Tell them: "We carry 350+ trusted brands! Type 'brands' in the chat to browse all brands A-Z and see products by brand."
-
-13. If user asks about departments, verticals, or product types:
-    Tell them: "We cover 18 product departments! Type 'vertical' or 'verticals' in the chat to browse all departments and see products by department."
-
-IMPORTANT RULES:
-- When displaying the product category list, ALWAYS show ALL 68 categories numbered 1-68. Never truncate or summarize the list.
-- When a user types a number 1-68 after seeing the product list, treat it as a category selection.
-- Always be helpful, friendly, and guide the user step by step.
-- Keep track of the selected category throughout the conversation.
-`;
-
-// Helper: store chat histories in memory
+// In-memory session store
 const sessions = {};
 
-// Endpoint: return categories list as JSON (used by frontend to render clickable buttons)
+// Endpoint: return categories list as JSON
 router.get('/categories', (req, res) => {
   res.json({ categories: PRODUCT_CATEGORIES });
 });
 
-// Try Gemini with automatic model fallback and retry on 503 overload
-async function callGeminiWithFallback(chatHistory) {
-  const models = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-2.5-flash'];
-  const maxRetries = 2;
-  const retryDelayMs = 2000;
+// Gemini call using systemInstruction (not injected into history) + model fallback
+async function callGemini(chatHistory) {
+  // gemini-2.0-flash-lite has its own quota pool — try it first
+  const models = ['gemini-2.0-flash-lite', 'gemini-2.0-flash', 'gemini-2.5-flash'];
+  const retryDelayMs = 1500;
 
   for (const model of models) {
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
       try {
         const response = await ai.models.generateContent({
           model,
+          config: { systemInstruction: SYSTEM_INSTRUCTION },
           contents: chatHistory,
         });
         return response.text;
       } catch (err) {
         const msg = err?.message || '';
-        const is503 = err?.status === 503 || msg.includes('503') || msg.includes('high demand') || msg.includes('UNAVAILABLE');
-        const is429 = err?.status === 429 || msg.includes('429') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED');
-        console.warn(`Gemini [${model}] attempt ${attempt} failed: ${msg}`);
-
-        if ((is503 || is429) && attempt < maxRetries) {
+        const isRetryable = msg.includes('503') || msg.includes('UNAVAILABLE') ||
+          msg.includes('high demand') || msg.includes('429') ||
+          msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED');
+        console.warn(`Gemini [${model}] attempt ${attempt}: ${msg.slice(0, 120)}`);
+        if (isRetryable && attempt < 2) {
           await new Promise(r => setTimeout(r, retryDelayMs));
           continue;
         }
-        break; // try next model
+        break; // move to next model
       }
     }
   }
-  throw new Error('Bunji is experiencing high demand right now. Please try again in a moment.');
+  throw new Error('Bunji is busy right now. Please try again in a moment.');
 }
 
 router.post('/message', async (req, res) => {
   try {
     if (!process.env.GEMINI_API_KEY) {
-      return res.status(500).json({ error: "Gemini API key is missing. Admin needs to configure it." });
+      return res.status(500).json({ error: 'Gemini API key not configured.' });
     }
 
     const { sessionId, message } = req.body;
     if (!sessionId || !message) {
-      return res.status(400).json({ error: "sessionId and message required" });
+      return res.status(400).json({ error: 'sessionId and message are required.' });
     }
 
+    // Init session — no system prompt in history anymore (passed via config)
     if (!sessions[sessionId]) {
-      sessions[sessionId] = [
-        { role: 'user', parts: [{ text: "SYSTEM PROMPT: " + SYSTEM_INSTRUCTION }] },
-        { role: 'model', parts: [{ text: "Understood. I am Bunji, ready to assist." }] }
-      ];
+      sessions[sessionId] = [];
     }
 
-    // Append user message
     sessions[sessionId].push({ role: 'user', parts: [{ text: message }] });
 
-    // Keep last 30 messages + system prompt to handle longer product flows
-    let chatHistory = sessions[sessionId];
-    if (chatHistory.length > 32) {
-      chatHistory = [chatHistory[0], chatHistory[1], ...chatHistory.slice(-30)];
-      sessions[sessionId] = chatHistory;
+    // Keep only last 12 exchanges (24 messages) to minimize token usage
+    if (sessions[sessionId].length > 24) {
+      sessions[sessionId] = sessions[sessionId].slice(-24);
     }
 
-    const reply = await callGeminiWithFallback(chatHistory);
+    const reply = await callGemini(sessions[sessionId]);
 
-    // Push model reply
     sessions[sessionId].push({ role: 'model', parts: [{ text: reply }] });
 
     res.json({ reply });
   } catch (error) {
-    console.error("Gemini Error:", error?.message || error);
-    res.status(500).json({ error: error?.message || "Failed to communicate with AI" });
+    console.error('Gemini Error:', error?.message || error);
+    res.status(500).json({ error: error?.message || 'Failed to communicate with AI.' });
   }
 });
 
