@@ -238,8 +238,12 @@ router.post('/message', async (req, res) => {
 
     res.json({ reply });
   } catch (error) {
-    console.error("Gemini Error:", error);
-    res.status(500).json({ error: "Failed to communicate with AI" });
+    console.error("Gemini Error full:", JSON.stringify(error?.message || error, null, 2));
+    const errMsg = error?.message || String(error);
+    res.status(500).json({
+      error: "Failed to communicate with AI",
+      detail: errMsg
+    });
   }
 });
 
