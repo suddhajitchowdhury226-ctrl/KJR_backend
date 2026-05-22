@@ -5,8 +5,38 @@ const bcrypt = require('bcryptjs');
 const Project = require('../models/Project');
 const Bid = require('../models/Bid');
 const User = require('../models/User');
+const Product = require('../models/Product');
 const auth = require('../middleware/auth');
 const nodemailer = require('nodemailer');
+
+// --- PRODUCTS API ---
+// @route   GET api/products/:category
+// @desc    Get products by category (paginated, 20 per page)
+// @access  Public
+router.get('/products/:category', async (req, res) => {
+  try {
+    const category = decodeURIComponent(req.params.category);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const [products, total] = await Promise.all([
+      Product.find({ category }).skip(skip).limit(limit).lean(),
+      Product.countDocuments({ category })
+    ]);
+
+    res.json({
+      products,
+      total,
+      page,
+      pages: Math.ceil(total / limit),
+      hasMore: skip + products.length < total
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
 
 // --- ADMIN AUTHENTICATION ---
 // @route   POST api/admin/login
@@ -126,24 +156,24 @@ router.post('/bids', upload.array('documents', 5), async (req, res) => {
   try {
     // 1. Save bid to database
     const newBid = new Bid({
-      project:       req.body.project,
-      projectName:   req.body.projectName,
-      companyName:   req.body.companyName,
+      project: req.body.project,
+      projectName: req.body.projectName,
+      companyName: req.body.companyName,
       contactPerson: req.body.contactPerson,
-      emailAddress:  req.body.emailAddress,
-      phone:         req.body.phone,
-      bidIntent:     req.body.bidIntent,
+      emailAddress: req.body.emailAddress,
+      phone: req.body.phone,
+      bidIntent: req.body.bidIntent,
       declineReason: req.body.declineReason,
-      bidAmount:     req.body.bidAmount ? parseFloat(req.body.bidAmount) : 0,
-      comments:      req.body.comments
+      bidAmount: req.body.bidAmount ? parseFloat(req.body.bidAmount) : 0,
+      comments: req.body.comments
     });
     const bid = await newBid.save();
 
     // 2. Send email notification
     try {
       const transporter = nodemailer.createTransport({
-        host:   process.env.SMTP_HOST || 'smtp.gmail.com',
-        port:   parseInt(process.env.SMTP_PORT) || 587,
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.SMTP_PORT) || 587,
         secure: false,
         auth: {
           user: process.env.SMTP_USER,
@@ -152,22 +182,22 @@ router.post('/bids', upload.array('documents', 5), async (req, res) => {
       });
 
       const notifyEmails = process.env.NOTIFY_EMAILS || 'estimating@kjrid.com';
-      const intentLabel  = bid.bidIntent === 'yes'
+      const intentLabel = bid.bidIntent === 'yes'
         ? `YES — Will Bid${bid.bidAmount ? ' | Amount: $' + Number(bid.bidAmount).toLocaleString() : ''}`
         : `NO — Declining${bid.declineReason ? ' | Reason: ' + bid.declineReason : ''}`;
 
       // Build file attachments array from multer buffers
       const attachments = (req.files || []).map(f => ({
-        filename:    f.originalname,
-        content:     f.buffer,
+        filename: f.originalname,
+        content: f.buffer,
         contentType: f.mimetype
       }));
 
       const mailOptions = {
-        from:        `"KJR Bid System" <${process.env.SMTP_USER}>`,
-        to:          notifyEmails,
-        replyTo:     bid.emailAddress,
-        subject:     `Bid Response: ${bid.projectName} — ${bid.companyName}`,
+        from: `"KJR Bid System" <${process.env.SMTP_USER}>`,
+        to: notifyEmails,
+        replyTo: bid.emailAddress,
+        subject: `Bid Response: ${bid.projectName} — ${bid.companyName}`,
         attachments,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
@@ -259,8 +289,8 @@ router.get('/admin/bids/:projectId', auth, async (req, res) => {
 router.post('/forms', upload.any(), async (req, res) => {
   try {
     const transporter = nodemailer.createTransport({
-      host:   process.env.SMTP_HOST || 'smtp.gmail.com',
-      port:   parseInt(process.env.SMTP_PORT) || 587,
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT) || 587,
       secure: false,
       auth: {
         user: process.env.SMTP_USER,
@@ -270,7 +300,7 @@ router.post('/forms', upload.any(), async (req, res) => {
 
     const notifyEmails = process.env.NOTIFY_EMAILS || 'estimating@kjrid.com';
     const subject = req.body._subject || 'New Form Submission';
-    
+
     // Build HTML body from all form fields
     let htmlBody = '<div style="font-family: Arial, sans-serif;"><h2>' + subject + '</h2><table border="1" cellpadding="10" style="border-collapse: collapse;">';
     for (const key in req.body) {
@@ -281,17 +311,17 @@ router.post('/forms', upload.any(), async (req, res) => {
     htmlBody += '</table></div>';
 
     const attachments = (req.files || []).map(f => ({
-      filename:    f.originalname,
-      content:     f.buffer,
+      filename: f.originalname,
+      content: f.buffer,
       contentType: f.mimetype
     }));
 
     const mailOptions = {
-      from:        `"KJR Form System" <${process.env.SMTP_USER}>`,
-      to:          notifyEmails,
-      replyTo:     req.body.Email || req.body.email || process.env.SMTP_USER,
-      subject:     subject,
-      html:        htmlBody,
+      from: `"KJR Form System" <${process.env.SMTP_USER}>`,
+      to: notifyEmails,
+      replyTo: req.body.Email || req.body.email || process.env.SMTP_USER,
+      subject: subject,
+      html: htmlBody,
       attachments
     };
 
@@ -316,7 +346,7 @@ router.post('/auth/register', async (req, res) => {
     }
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-    
+
     user = new User({
       loginType,
       email,
@@ -325,13 +355,13 @@ router.post('/auth/register', async (req, res) => {
       companyName: loginType === 'sales' ? companyName : '',
       instructorName: loginType === 'grad' ? instructorName : ''
     });
-    
+
     await user.save();
-    
+
     const payload = { user: { id: user.id, role: loginType } };
     jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '24h' }, (err, token) => {
       if (err) throw err;
-      res.json({ token, user: { id: user.id, username: user.username, email: user.email, loginType }});
+      res.json({ token, user: { id: user.id, username: user.username, email: user.email, loginType } });
     });
   } catch (err) {
     console.error(err.message);
@@ -344,28 +374,28 @@ router.post('/auth/register', async (req, res) => {
 router.post('/auth/login', async (req, res) => {
   const { identifier, password, loginType } = req.body;
   try {
-    const user = await User.findOne({ 
+    const user = await User.findOne({
       $or: [{ email: identifier }, { username: identifier }],
-      loginType 
+      loginType
     });
-    
+
     if (!user) {
       return res.status(400).json({ errors: [{ msg: 'Invalid Credentials for this account type' }] });
     }
-    
+
     if (user.status !== 'active') {
       return res.status(403).json({ errors: [{ msg: 'Account is suspended or inactive' }] });
     }
-    
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ errors: [{ msg: 'Invalid Credentials' }] });
     }
-    
+
     const payload = { user: { id: user.id, role: user.loginType } };
     jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '24h' }, (err, token) => {
       if (err) throw err;
-      res.json({ token, user: { id: user.id, username: user.username, email: user.email, loginType: user.loginType }});
+      res.json({ token, user: { id: user.id, username: user.username, email: user.email, loginType: user.loginType } });
     });
   } catch (err) {
     console.error(err.message);

@@ -12,6 +12,8 @@
   // ─── PRODUCT DATA ─────────────────────────────────────────────────────────
   // Add img: 'assets/images/products/filename.jpg' for each product
   const CATEGORY_PRODUCTS = {
+
+    // ── 1. Accumulators & Receivers ──────────────────────────────────────────
     "Accumulators & Receivers": [
       { name: "Rheem VPA-589-6SRD Accumulator", part: "VPA-589-6SRD", price: "$109.95", was: "$120.95", img: "assets/images/products/vpa-589-6srd.jpg" },
       { name: "Rheem VPA-5811-7SRD Accumulator", part: "VPA-5811-7SRD", price: "$120.95", was: "$133.05", img: "assets/images/products/vpa-5811-7srd.jpg" },
@@ -19,6 +21,243 @@
       { name: "Rheem VA-35-5S Accumulator", part: "VA-35-5S", price: "$96.95", was: "$108.58", img: "assets/images/products/va-35-5s.jpg" },
       { name: "Rheem VA-31-5S Accumulator", part: "VA-31-5S", price: "$97.95", was: "$109.70", img: "assets/images/products/va-31-5s.jpg" },
     ],
+
+    // ── 3. Air Cleaners ──────────────────────────────────────────────────────
+    "Air Cleaners": [
+      { name: "Merv 8 Replacement Filter", part: "PD540040", price: "$64.95", was: "$75.34", img: null },
+      { name: "Merv 8 Replacement Filter For Xhf-e21", part: "PD540042", price: "$69.95", was: "$81.14", img: null },
+      { name: "Merv 8 Replacement Filter For Xhf-e24", part: "PD540044", price: "$44.95", was: "$54.39", img: null },
+      { name: "Merv 8 Replacement Filter For Xgf-e17", part: "PD540041", price: "$79.95", was: "$89.54", img: null },
+      { name: "Merv 8 Replacement Filter For Xgf-e21", part: "PD540043", price: "$83.95", was: "$94.02", img: null },
+      { name: "Air Bear - 20X20", part: "84-25050-05", price: "$175.95", was: "$193.55", img: null },
+      { name: "Media Air Cleaner - 2000 Cfm", part: "84-25050-01", price: "$153.95", was: "$169.35", img: null },
+      { name: "Air Bear 16 X 25 - 1400 Cfm", part: "84-25050-06", price: "$226.95", was: "$249.65", img: null },
+      { name: "Right Angle Air Bear", part: "84-25050-03", price: "$294.95", was: "$324.45", img: null },
+      { name: "Pro Filter Pleated 21-Inchea", part: "PD540002", price: "$73.95", was: "$85.78", img: null },
+      { name: "Competitive Media 16 X 25", part: "613", price: "$84.95", was: "$95.14", img: null },
+      { name: "H/w 20X25 Media Filter", part: "FC200E1037/U", price: "$97.95", was: "$109.70", img: null },
+      { name: "H/w 25X22 Media Air Cleaner", part: "F100F2051/U", price: "$252.95", was: "$278.25", img: null },
+      { name: "Nordyne Cust Repl Flt-inchb-incab", part: "918737A", price: "$76.95", was: "$86.18", img: null },
+      { name: "Nordyne Cust Repl Flt-inchc-incab", part: "918759A", price: "$136.95", was: "$150.65", img: null },
+      { name: "April Media For 2400", part: "401", price: "$78.95", was: "$88.42", img: null },
+      { name: "410 Air Cleaner Merv 10", part: "410", price: "$53.95", was: "$62.58", img: null },
+      { name: "20X25 Media Filter Merv 13", part: "813", price: "$106.95", was: "$117.65", img: null },
+      { name: "Air Oasis 9-Inch Rplcmnt Cell", part: "NINDAHPC09", price: "$352.95", was: "$388.25", img: null },
+      { name: "310 Media For 3310 & 4300", part: "310", price: "$95.95", was: "$107.46", img: null },
+      { name: "913 Media For 1910-Merv 13", part: "913", price: "$90.95", was: "$101.86", img: null },
+      { name: "20X20x3 Merv13 Media Filter", part: "FC313R2020/U", price: "$121.95", was: "$134.15", img: null },
+      { name: "Tri Purity Rheem Cabinet", part: "TUV-PRT-ER-17.5", price: "$1,505.95", was: "$1,656.55", img: null },
+      { name: "Nu Iwave-r", part: "4900-20", price: "$635.95", was: "$699.55", img: null },
+      { name: "Sunbelt Ionizer", part: "D1.2-2", price: "$770.95", was: "$848.05", img: null },
+      { name: "Sunbelt C10 Plasma Generator", part: "C-10.0", price: "$2,859.95", was: "$3,145.95", img: null },
+      { name: "Water Panel For Models 350", part: "35", price: "$20.95", was: "$25.98", img: null },
+      { name: "24V Current Sensing Relay", part: "50", price: "$74.95", was: "$86.94", img: null },
+      { name: "Digital Dehumd Control", part: "76", price: "$259.95", was: "$285.95", img: null },
+      { name: "Low Conductivity Canister", part: "80LC", price: "$121.95", was: "$134.15", img: null },
+      { name: "Air Oasis Air Sanitizor", part: "NIND9-24", price: "$788.95", was: "$867.85", img: null },
+      { name: "14-Inch Dust Free Carbon Air Purifier", part: "13052", price: "$736.95", was: "$810.65", img: null },
+    ],
+
+    // ── 2. Adhesives ─────────────────────────────────────────────────────────
+    "Adhesives": [
+      { name: "Versa-grip 102-25", part: "VG10225", price: "$8.95", was: "$11.55", img: null },
+      { name: "Duct Sealant #22 Wht 1 Gal", part: "AIRSEAL22-1", price: "$30.95", was: "$37.45", img: null },
+      { name: "Duct Sealant #33 1 Gal", part: "AIRSEAL33-1", price: "$27.95", was: "$33.82", img: null },
+      { name: "Duct Sealant Wht 1 Gal", part: "CADS1", price: "$20.95", was: "$25.98", img: null },
+      { name: "Duct Sealant Gray 1 Gal", part: "CADS1-GRAY", price: "$19.95", was: "$24.74", img: null },
+      { name: "Duct Sealant Wht 2 Gal", part: "CADS2", price: "$38.95", was: "$47.13", img: null },
+      { name: "Duct Sealant #33 Wht Tube", part: "AIRSEAL33-TUBE", price: "$8.95", was: "$11.55", img: null },
+      { name: "Duct Sealant #33 Wht 2 Gal", part: "AIRSEAL33-2", price: "$63.95", was: "$74.18", img: null },
+      { name: "Duct Sealant Wht 5 Gal", part: "CADS5", price: "$105.95", was: "$116.55", img: null },
+      { name: "Duct Sealant #11 Gray 2 Gal", part: "AIRSEAL11-2GRAY", price: "$75.95", was: "$85.06", img: null },
+      { name: "Duct Sealant #11 Gray 1 Gal", part: "AIRSEAL11-1GRAY", price: "$41.95", was: "$50.76", img: null },
+      { name: "Duct Sealant #22 Gray Tube", part: "AIRSEAL11-TUBEGRAY", price: "$7.95", was: "$10.26", img: null },
+      { name: "Duct Sealant #22 Wht 2 Gal", part: "AIRSEAL22-2", price: "$48.95", was: "$59.23", img: null },
+      { name: "Duct Sealant #33 Gray 1 Gal", part: "AIRSEAL33-1GRAY", price: "$27.95", was: "$33.82", img: null },
+      { name: "11Oz Ccwi 181 Dct Seal Gray", part: "CCWI-181T(G)", price: "$5.95", was: "$7.91", img: null },
+      { name: "1 Gal Wtr Base Seal Ds321", part: "DS-321-1G", price: "$27.95", was: "$33.82", img: null },
+      { name: "1Gal Duct-seal Ul1 Gray", part: "CCWI-181-GRAY", price: "$25.95", was: "$31.40", img: null },
+      { name: "1 Gal Duct Seal Ul181 Wht", part: "CCWI-181-WHITE", price: "$24.95", was: "$30.94", img: null },
+      { name: "1 Gal Hgh Perform Duct Seal", part: "ASZERO-1(G)", price: "$95.95", was: "$107.46", img: null },
+      { name: "Insulation Adhesive #40", part: "308602A", price: "$653.95", was: "$719.35", img: null },
+      { name: "Air Lag Water Based Adhes", part: "AL-1(W)", price: "$31.95", was: "$38.66", img: null },
+      { name: "Hc Seal Tack Wht 1 Gal", part: "SEALTACK", price: "$57.95", was: "$67.22", img: null },
+      { name: "2 Gal Duct Seal Ul181 White", part: "CCWI-181-2", price: "$91.95", was: "$102.98", img: null },
+      { name: "Div/wag Qt Triger Spryer", part: "BS32", price: "$10.95", was: "$14.13", img: null },
+      { name: "Sure Stick Spray Adh 12 Oz", part: "31520", price: "$19.95", was: "$24.74", img: null },
+      { name: "Fas Spray Glue Adh 17 Oz", part: "1000S-ADH", price: "$14.95", was: "$19.29", img: null },
+      { name: "Aerosol Spray Adhesive Can", part: "AEROTACK", price: "$8.95", was: "$11.55", img: null },
+      { name: "Nu-calgon Spray-n-b", part: "4369-85", price: "$12.95", was: "$16.71", img: null },
+      { name: "Premium Spray Adhesive 19.6", part: "POLY44SA", price: "$12.95", was: "$16.71", img: null },
+    ],
+
+    // ── 4. Air Filters ───────────────────────────────────────────────────────
+    "Air Filters": [
+      // Air Cleaner Filters
+      { name: "Trion Air Bear Merv 8 Media Filter", part: "252990-902", price: "$30.95", was: "$37.45", img: null },
+      { name: "H/w 16X25 Media Air Filter", part: "FC100A1029/U", price: "$52.95", was: "$61.42", img: null },
+      { name: "H/w 20X25 Media Air Filter", part: "FC100A1037/U", price: "$54.95", was: "$63.74", img: null },
+      { name: "H/w 16X20 Media Air Filter", part: "FC100A1003/U", price: "$54.95", was: "$63.74", img: null },
+      { name: "H/w 20X20 Media Air Filter", part: "FC100A1011/U", price: "$52.95", was: "$61.42", img: null },
+      { name: "As Filter 5-Inch Media 21.5", part: "FLR06072", price: "$63.95", was: "$74.18", img: null },
+      { name: "As Filter 5-Inch Media 23.5", part: "FLR06073", price: "$93.95", was: "$105.22", img: null },
+      { name: "As Filter 5-Inch Media 26-Inch", part: "FLR06074", price: "$78.95", was: "$88.42", img: null },
+      { name: "H/w 20X25 Popup Ma Filter", part: "POPUP2025/U", price: "$78.95", was: "$88.42", img: null },
+      { name: "H/w Popup Media Fltr 16X25", part: "POPUP1625/U", price: "$74.95", was: "$86.94", img: null },
+      { name: "As Fltr 5-Inch Media Filter", part: "FLR06069", price: "$59.95", was: "$69.54", img: null },
+      { name: "H/w Media Replacemnt Fltr", part: "POPUP2200/U", price: "$84.95", was: "$95.14", img: null },
+      { name: "Merv 11 20X25x6 Filter", part: "SGP20256M11", price: "$82.95", was: "$92.90", img: null },
+      { name: "110 Media For 1110-Merv 11", part: "110", price: "$95.95", was: "$107.46", img: null },
+      { name: "Gf 20X25x5 Air Bear Rpl Flt", part: "ABP20255M13", price: "$90.95", was: "$101.86", img: null },
+      // Disposable Fiberglass Panel Filters
+      { name: "10X10x1 Fbg Dbl Strut", part: "GDS10101", price: "$7.95", was: "$10.26", img: null },
+      { name: "10X20x1 Fbg Dbl Strt T/a", part: "GDS10201", price: "$7.95", was: "$10.26", img: null },
+      { name: "10X24x1 Fbg Dbl Strut T/a", part: "GDS10241", price: "$7.95", was: "$10.26", img: null },
+      { name: "12X20x1 Fbg Dbl Strut T/a", part: "GDS12201", price: "$7.95", was: "$10.26", img: null },
+      { name: "12X30x1 Fbg Dbl Strut T/a", part: "GDS12301", price: "$8.95", was: "$11.55", img: null },
+      { name: "14X24x1 Fbg Dbl Strut T/a", part: "GDS14241", price: "$7.95", was: "$10.26", img: null },
+      { name: "14X30x1 Fbg Dbl Strut T/a", part: "GDS14301", price: "$7.95", was: "$10.26", img: null },
+      { name: "15X20x1 Fbg Dbl Strut", part: "GDS15201", price: "$8.95", was: "$11.55", img: null },
+      { name: "15X30x1 Fbg Dbl Strt Gds", part: "GDS15301", price: "$6.95", was: "$9.24", img: null },
+      { name: "16X16x1 Fbg Dbl Strut Gd", part: "GDS16161", price: "$7.95", was: "$10.26", img: null },
+      { name: "16X24x1 Fbg Dbl Strut Gds", part: "GDS16241", price: "$7.95", was: "$10.26", img: null },
+      { name: "16X30x1 Fbg Dbl Strut", part: "GDS16301", price: "$8.95", was: "$11.55", img: null },
+      { name: "18X18x1 Fbg Dbl Strut Gds", part: "GDS18181", price: "$8.95", was: "$11.55", img: null },
+      { name: "18X20x1 Fbg Dbl Strut Gds", part: "GDS18201", price: "$8.95", was: "$11.55", img: null },
+      { name: "18X24x1 Fbg Dbl Strut Gds", part: "GDS18241", price: "$8.95", was: "$11.55", img: null },
+      { name: "18X25x1 Fbg Dbl Strut Gds", part: "GDS18251", price: "$8.95", was: "$11.55", img: null },
+      { name: "18X30x1 Fbg Dbl Strut Gds", part: "GDS18301", price: "$11.95", was: "$15.42", img: null },
+      { name: "20X24x1 Fbg Dbl Strut Gds", part: "GDS20241", price: "$7.95", was: "$10.26", img: null },
+      { name: "12X16x1 Fbg Dbl Strut Gds", part: "GDS12161", price: "$8.95", was: "$11.55", img: null },
+      { name: "24X24x1 Fbg Dbl Strut T/a", part: "GDS24241", price: "$8.95", was: "$11.55", img: null },
+      { name: "24X30x1 Fbg Dbl Strut T/a", part: "GDS24301", price: "$7.95", was: "$10.26", img: null },
+      { name: "25X25x1 Fbg Dbl Strut T/a", part: "GDS25251", price: "$8.95", was: "$11.55", img: null },
+      { name: "30X30x1 Fbg Dbl Sz Ta Fl", part: "GTASP30301", price: "$26.95", was: "$32.61", img: null },
+      { name: "15X20x2 Fbg Dbl Strut T/a", part: "GDS15202", price: "$6.95", was: "$9.24", img: null },
+      { name: "16X24x2 Fbg Dbl Strut Gds", part: "GDS16242", price: "$9.95", was: "$12.84", img: null },
+      { name: "18X18x2 Fbg T/a Filter Gta", part: "GTASP18182", price: "$14.95", was: "$19.29", img: null },
+      { name: "18X24x2 Fbg Dbl Strut Gd", part: "GDS18242", price: "$7.95", was: "$10.26", img: null },
+      { name: "20X24x2 Fbg Dbl Strt Gds", part: "GDS20242", price: "$7.95", was: "$10.26", img: null },
+      { name: "20X25x2 Fbg Dbl Strut T/a", part: "GDS20252", price: "$7.95", was: "$10.26", img: null },
+      { name: "16X25x4 Zl Pleat T/a Filter", part: "ZLP16254", price: "$15.95", was: "$19.78", img: null },
+      { name: "24X24x4 Zl Pleat T/a Filter", part: "ZLP24244", price: "$17.95", was: "$22.26", img: null },
+      { name: "20X25x4 Zl Pleated Filter", part: "ZLP20254", price: "$21.95", was: "$27.22", img: null },
+      { name: "20X20x4 Zl Pleat 40% Eff", part: "ZLP20204", price: "$17.95", was: "$22.26", img: null },
+      { name: "16X20x4 Zl Pleatd T/a", part: "ZLP16204", price: "$16.95", was: "$21.02", img: null },
+      { name: "12X12x1 Poly Throwaway", part: "PTA12121", price: "$5.95", was: "$7.91", img: null },
+      { name: "14X24x1 Poly Throwaway", part: "PTA14241", price: "$5.95", was: "$7.91", img: null },
+      { name: "16X30x2 Poly Throwaway", part: "PTASP16302", price: "$11.95", was: "$15.42", img: null },
+      { name: "20X22x1 Fbg T/a Fltr Gta", part: "GTASP20221", price: "$14.95", was: "$19.29", img: null },
+      { name: "12X18x1 Fbg Dbl Strut T/a", part: "GDS12181", price: "$7.95", was: "$10.26", img: null },
+      { name: "12X12x1 Fbg Dbl Strut T/a", part: "GDS12121", price: "$7.95", was: "$10.26", img: null },
+      { name: "12X24x1 Fbg Dbl Strut T/a", part: "GDS12241", price: "$7.95", was: "$10.26", img: null },
+      { name: "12X36x1 Fbg Dbl Strut T/a", part: "GDS12361", price: "$14.95", was: "$19.29", img: null },
+      { name: "14X14x1 Fbg Dbl Strut Ta", part: "GDS14141", price: "$7.95", was: "$10.26", img: null },
+      { name: "14X20x1 Fbg Dbl Strut T/a", part: "GDS14201", price: "$7.95", was: "$10.26", img: null },
+      { name: "14X25x1 Fbg Dbl Strut T/a", part: "GDS14251", price: "$7.95", was: "$10.26", img: null },
+      { name: "16X20x1 Fbg Dbl Strut T/a", part: "GDS16201", price: "$7.95", was: "$10.26", img: null },
+      { name: "16X25x1 Fbg Dbl Strut Ta", part: "GDS16251", price: "$7.95", was: "$10.26", img: null },
+      { name: "20X20x1 Fbg Dbl Strut T/a", part: "GDS20201", price: "$7.95", was: "$10.26", img: null },
+      { name: "20X25x1 Fbg Dbl Strut T/a", part: "GDS20251", price: "$7.95", was: "$10.26", img: null },
+      { name: "20X30x1 Fbg Dbl Strut T/a", part: "GDS20301", price: "$8.95", was: "$11.55", img: null },
+      { name: "16X20x2 Fbg Dbl Strut T/a", part: "GDS16202", price: "$8.95", was: "$11.55", img: null },
+      { name: "16X25x2 Fbg Dbl Strut T/a", part: "GDS16252", price: "$8.95", was: "$11.55", img: null },
+      { name: "20X20x2 Fbg Dbl Strut T/a", part: "GDS20202", price: "$6.95", was: "$9.24", img: null },
+      { name: "22X22x1 Fg Disp Fi", part: "GDS22221", price: "$8.95", was: "$11.55", img: null },
+      { name: "2-Inch Gds Fg Disp 24X24 Flt", part: "GDS24242", price: "$10.95", was: "$14.13", img: null },
+      { name: "20X30x2 Fg Disp Fi", part: "GTASP20302", price: "$19.95", was: "$24.74", img: null },
+      { name: "30X36x1 Disposable Air Filt", part: "GTA30361", price: "$20.95", was: "$25.98", img: null },
+      { name: "19X22x1 Poly Filter", part: "PTASP19221", price: "$14.95", was: "$19.29", img: null },
+      { name: "14X18x1 Fbg Dbl Strut Ta", part: "GDS14181", price: "$7.95", was: "$10.26", img: null },
+      { name: "16X16x2 Disposable Filter", part: "GDS16162", price: "$8.95", was: "$11.55", img: null },
+      { name: "20X22x1 Fiberglass Flt", part: "GDS20221", price: "$9.95", was: "$12.84", img: null },
+      { name: "17.5X21x1 Poly T/a", part: "GTASP17H211", price: "$11.95", was: "$15.42", img: null },
+      { name: "16 3/8X21 1/2 Fltr Dbl S", part: "GDS1638X2112", price: "$11.95", was: "$15.42", img: null },
+      { name: "20X36x1 Fbg Dbl Strut Ta", part: "GDS20361", price: "$8.95", was: "$11.55", img: null },
+      { name: "16X16x1 Poly Throwaway Filt", part: "PTA16161", price: "$7.95", was: "$10.26", img: null },
+      { name: "Glassfloss 12-5/8/20X1/2", part: "GTASP12K200H", price: "$10.95", was: "$14.13", img: null },
+      // Disposable Synthetic (Poly) Panel Filters
+      { name: "16X20x2 Poly Throwaway", part: "PTA16202", price: "$6.95", was: "$9.24", img: null },
+      { name: "16X24x2 Poly Throwaway", part: "PTA16242", price: "$6.95", was: "$9.24", img: null },
+      { name: "18X18x2 Poly Throwaway", part: "PTASP18182", price: "$17.95", was: "$22.26", img: null },
+      { name: "12X25x1 Pleated Filter Nom", part: "ZLPSP12251", price: "$9.95", was: "$12.84", img: null },
+      { name: "20X35x2 Filter", part: "PTASP20352", price: "$21.95", was: "$27.22", img: null },
+      // Electrostatic Filters (sample)
+      { name: "Electrostatic Filter 16X20x1", part: "ESF-16201", price: "$24.95", was: "$29.99", img: null },
+      { name: "Electrostatic Filter 20X25x1", part: "ESF-20251", price: "$27.95", was: "$33.50", img: null },
+      { name: "Electrostatic Filter 16X25x1", part: "ESF-16251", price: "$25.95", was: "$31.14", img: null },
+      { name: "Electrostatic Filter 20X20x1", part: "ESF-20201", price: "$23.95", was: "$28.74", img: null },
+      { name: "Electrostatic Filter 14X20x1", part: "ESF-14201", price: "$22.95", was: "$27.54", img: null },
+      // Pleated Filters - Standard (sample)
+      { name: "Pleated Filter 16X20x1 Merv 8", part: "PLT-16201-M8", price: "$9.95", was: "$12.84", img: null },
+      { name: "Pleated Filter 20X25x1 Merv 8", part: "PLT-20251-M8", price: "$10.95", was: "$14.13", img: null },
+      { name: "Pleated Filter 16X25x1 Merv 11", part: "PLT-16251-M11", price: "$13.95", was: "$17.55", img: null },
+      { name: "Pleated Filter 20X20x1 Merv 11", part: "PLT-20201-M11", price: "$12.95", was: "$16.71", img: null },
+      { name: "Pleated Filter 20X25x2 Merv 13", part: "PLT-20252-M13", price: "$18.95", was: "$23.69", img: null },
+      // Specialty Filters (sample)
+      { name: "Carbon Odor Filter 20X25x1", part: "SPF-CARB-2025", price: "$19.95", was: "$24.74", img: null },
+      { name: "HEPA Filter 16X25x4", part: "SPF-HEPA-1625", price: "$49.95", was: "$59.94", img: null },
+      { name: "Antimicrobial Filter 20X20x1", part: "SPF-ANTI-2020", price: "$15.95", was: "$19.78", img: null },
+      { name: "Washable Filter 16X20x1", part: "SPF-WASH-1620", price: "$29.95", was: "$35.94", img: null },
+      { name: "UV Filter Pad 10X10", part: "SPF-UV-1010", price: "$22.95", was: "$27.54", img: null },
+    ],
+
+    // ── 5. Airflow Accessories ────────────────────────────────────────────────
+    "Airflow Accessories": [
+      { name: "Sw Blank Trans 2 16X36", part: "MBT1R6", price: "$132.95", was: "$146.25", img: null },
+      { name: "Sw 16X20 No Flange-8-inchdp", part: "1701620R8", price: "$108.95", was: "$119.85", img: null },
+      { name: "Sw Return Box 14X25x12", part: "RABR8142512", price: "$109.95", was: "$120.95", img: null },
+      { name: "Sw Return Box 16X25x12", part: "RABR8162512", price: "$179.95", was: "$197.95", img: null },
+      { name: "R8 822Wx24dx20", part: "USBR822WX24DX20", price: "$98.95", was: "$110.82", img: null },
+      { name: "Mtl Zinc 30X36x21 R6 Plenum", part: "P302136-R6-1-0BX", price: "$185.95", was: "$204.55", img: null },
+      { name: "Mtl Zinc 21X36x29 R6 Plenum", part: "P212936-R6-1-0BX", price: "$232.95", was: "$256.25", img: null },
+      { name: "Mtl Zinc 20X25x36 R6 Plenum", part: "P202536-R6-1-0BX", price: "$105.95", was: "$116.55", img: null },
+      { name: "Mtl Zinc 14X36x20 R6 Plenum", part: "P142036-R6-1-0BX", price: "$92.95", was: "$104.10", img: null },
+      { name: "Mtl Zinc 16X36x20 R6 Plenum", part: "P162036-R6-1-0BX", price: "$69.95", was: "$81.14", img: null },
+      { name: "Mtl Zinc 11X36x16 R6 Plenum", part: "P111636-R6-1-0BX", price: "$61.95", was: "$71.86", img: null },
+      { name: "Mtl Zinc 16X36x25 R6 Plenum", part: "P162536-R6-1-0BX", price: "$69.95", was: "$81.14", img: null },
+      { name: "Mtl Zinc 20X48x20 R6 Plenum", part: "P202048-R6-1-0BX", price: "$149.95", was: "$164.95", img: null },
+      { name: "Mtl Zinc 11X36x20 R6 Plenum", part: "P112036-R6-1-0BX", price: "$67.95", was: "$78.82", img: null },
+      { name: "Mtl Zinc 20X36x20 R6 Plenum", part: "P202036-R6-1-0BX", price: "$77.95", was: "$87.30", img: null },
+      { name: "Mtl Zinc 36X36x21 R6 Plenum", part: "P362136-R6-1-0BX", price: "$246.95", was: "$271.65", img: null },
+      { name: "Gpe 13.5 X 15.5 X 36 Plenum", part: "2801.134154360.26", price: "$88.95", was: "$99.62", img: null },
+      { name: "12 X 12 X 23 Plenum Cap/f", part: "2801.120120230.28", price: "$108.95", was: "$119.85", img: null },
+      { name: "20 X 20.25 X 24 Plenum", part: "2801.200202240.26", price: "$65.95", was: "$76.50", img: null },
+      { name: "15 X 16 X 58 Plenum Cap/f", part: "2801.150160580.26", price: "$168.95", was: "$185.85", img: null },
+      { name: "16.25 X 16.25 X 48 Plenum", part: "2801.162162480.26", price: "$137.95", was: "$151.75", img: null },
+      { name: "15.25 X 24.75 X 24 Plenum (R6)", part: "2801.152246240.26", price: "$79.95", was: "$89.54", img: null },
+      { name: "16.75 X 20.25 X 24 Plenum", part: "2801.166202240.26", price: "$75.95", was: "$85.06", img: null },
+      { name: "16 X 21 X 36 Plenum Cap/f", part: "2801.160210360.28", price: "$127.95", was: "$140.75", img: null },
+      { name: "20.25 X 23.75 X 36 Plenum (R8)", part: "2801.202236360.28", price: "$143.95", was: "$158.35", img: null },
+      { name: "13 X 20 X 24 Plenum Cap/f", part: "2801.130200240.28", price: "$98.95", was: "$110.82", img: null },
+      { name: "11.75 X 24.75 X 24 Plenum", part: "2801.116246240.26", price: "$84.95", was: "$95.14", img: null },
+      { name: "20 X 20.25 X 36 Plenum (R8)", part: "2801.200202360.28", price: "$135.95", was: "$149.55", img: null },
+      { name: "15 X 20 X 58 Plenum Cap/f", part: "2801.150200580.26", price: "$180.95", was: "$199.05", img: null },
+      { name: "18.75 X 24.75 X 24 Plenum (R8)", part: "2801.186246240.28", price: "$114.95", was: "$126.45", img: null },
+      { name: "20 X 20.25 X 36 Plenum (R6)", part: "2801.200202360.26", price: "$82.95", was: "$92.90", img: null },
+      { name: "15.25 X 24.75 X 24 Plenum (R8)", part: "2801.152246240.28", price: "$108.95", was: "$119.85", img: null },
+      { name: "20.25 X 23.75 X 36 Plenum (R6)", part: "2801.202236360.26", price: "$143.95", was: "$158.35", img: null },
+      { name: "10.50 X 16.25 X 24 Plenum", part: "2801.104162240.26", price: "$88.95", was: "$99.62", img: null },
+      { name: "22.25 X 24.75 X 24 Plenum", part: "2801.222246240.26", price: "$102.95", was: "$113.25", img: null },
+      { name: "17.5 X 24 X 36 Plenum Cap", part: "2801.174240360.26", price: "$137.95", was: "$151.75", img: null },
+      { name: "13.25 X 20.25 X 30 Plenum", part: "2801.132202300.28", price: "$108.95", was: "$119.85", img: null },
+      { name: "16.75 X 20.25 X 36 Plenum (R8)", part: "2801.166202360.28", price: "$111.95", was: "$123.15", img: null },
+      { name: "20.25 X 20.625 X 36 Plenum", part: "2801.202205360.26", price: "$113.95", was: "$125.35", img: null },
+      { name: "13.25 X 20.25 X 24 Plenum", part: "2801.132202240.26", price: "$82.95", was: "$92.90", img: null },
+      { name: "13.25 X 20.25 X 36 Plenum", part: "2801.132202360.26", price: "$98.95", was: "$110.82", img: null },
+      { name: "15.875 X 20.625 X 36 Plenum (R8)", part: "2801.157205360.28", price: "$125.95", was: "$138.55", img: null },
+      { name: "18.75 X 24.75 X 24 Plenum (R6)", part: "2801.186246240.26", price: "$86.95", was: "$97.38", img: null },
+      { name: "16.75 X 20.25 X 36 Plenum (R6)", part: "2801.166202360.26", price: "$92.95", was: "$104.10", img: null },
+      { name: "10.5 X 19.75 X 24 Plenum", part: "2801.104196240.26", price: "$92.95", was: "$104.10", img: null },
+      { name: "20 X 24 X 36 Plenum Cap/f", part: "2801.200240360.26", price: "$143.95", was: "$158.35", img: null },
+      { name: "20.25 X 23.75 X 24 Plenum", part: "2801.202236240.26", price: "$84.95", was: "$95.14", img: null },
+      { name: "Gpe 30-Inch Plenum Int Bubbleins", part: "2870.60AR.26", price: "$205.95", was: "$226.55", img: null },
+      { name: "Gpe 9.5 X 15.5 X 36 Plenum", part: "2801.094154360.26", price: "$64.95", was: "$75.34", img: null },
+      { name: "20 X 20 X 24 Plenum Cap/f", part: "2801.200200240.26", price: "$79.95", was: "$89.54", img: null },
+      { name: "16 X 20 X 30 Plenum Cap/f", part: "2801.160200300.28", price: "$82.95", was: "$92.90", img: null },
+      { name: "15.875 X 16.625 X 36 Plenum", part: "2801.157165360.28", price: "$117.95", was: "$129.75", img: null },
+    ],
+
   };
 
   const PRODUCT_CATEGORIES = [
@@ -286,8 +525,88 @@
   }
 
   // ─── PRODUCT CARDS ────────────────────────────────────────────────────────
-  function renderProductCards(categoryName) {
-    const products = CATEGORY_PRODUCTS[categoryName] || getDefaultProducts(categoryName);
+  // Build a single product card element
+  function buildCard(product, categoryName) {
+    const card = document.createElement('div');
+    card.className = 'bunji-prod-card';
+
+    const img = document.createElement('img');
+    img.className = 'bunji-prod-img';
+    img.alt = product.name;
+    img.src = product.img || PLACEHOLDER;
+    img.onerror = () => { img.src = PLACEHOLDER; };
+    card.appendChild(img);
+
+    const body = document.createElement('div');
+    body.className = 'bunji-prod-body';
+
+    const name = document.createElement('div');
+    name.className = 'bunji-prod-name';
+    name.textContent = product.name;
+
+    const part = document.createElement('div');
+    part.className = 'bunji-prod-part';
+    part.textContent = `Part #: ${product.part}`;
+
+    const pricing = document.createElement('div');
+    pricing.className = 'bunji-prod-pricing';
+
+    const priceVal = typeof product.price === 'number'
+      ? '$' + product.price.toFixed(2)
+      : product.price;
+    const wasVal = product.was
+      ? (typeof product.was === 'number' ? '$' + product.was.toFixed(2) : product.was)
+      : null;
+
+    const priceEl = document.createElement('span');
+    priceEl.className = 'bunji-prod-price';
+    priceEl.textContent = priceVal;
+    pricing.appendChild(priceEl);
+
+    if (wasVal) {
+      const wasEl = document.createElement('span');
+      wasEl.className = 'bunji-prod-was';
+      wasEl.textContent = `was ${wasVal}`;
+      pricing.appendChild(wasEl);
+    }
+
+    const buyBtn = document.createElement('button');
+    buyBtn.className = 'bunji-buy-btn';
+    buyBtn.textContent = '🛒 BUY';
+    buyBtn.addEventListener('click', () => {
+      if (buyBtn.classList.contains('added')) return;
+      buyBtn.classList.add('added');
+      buyBtn.textContent = '✓ Added';
+      addBubble(`I want to buy: ${product.name} (Part #${product.part}) — ${priceVal}`, 'user');
+      setTimeout(() => {
+        addBubble(
+          `🎉 Thank you for your order!\n\n` +
+          `📦 Item: ${product.name}\n` +
+          `🔖 Part #: ${product.part}\n` +
+          `💰 Price: ${priceVal}\n\n` +
+          `We are updating your profile and processing your request.\n` +
+          `Our team will follow up with you shortly to confirm your order.\n\n` +
+          `To complete your purchase, please visit:\n` +
+          `🌐 www.encompass.com\n` +
+          `   Username: 312446\n\n` +
+          `Is there anything else I can help you with?`,
+          'bunji'
+        );
+      }, 600);
+    });
+
+    body.appendChild(name);
+    body.appendChild(part);
+    body.appendChild(pricing);
+    body.appendChild(buyBtn);
+    card.appendChild(body);
+    return card;
+  }
+
+  // Fetch products from API and render with pagination
+  async function renderProductCards(categoryName) {
+    // First check local hardcoded data
+    const localProducts = CATEGORY_PRODUCTS[categoryName];
 
     const wrapper = document.createElement('div');
     wrapper.className = 'bunji-prod-wrapper';
@@ -304,68 +623,80 @@
 
     const list = document.createElement('div');
     list.className = 'bunji-prod-list';
-
-    products.forEach(product => {
-      const card = document.createElement('div');
-      card.className = 'bunji-prod-card';
-
-      // Image
-      const img = document.createElement('img');
-      img.className = 'bunji-prod-img';
-      img.alt = product.name;
-      img.src = product.img || PLACEHOLDER;
-      img.onerror = () => { img.src = PLACEHOLDER; };
-      card.appendChild(img);
-
-      // Body
-      const body = document.createElement('div');
-      body.className = 'bunji-prod-body';
-
-      const name = document.createElement('div');
-      name.className = 'bunji-prod-name';
-      name.textContent = product.name;
-
-      const part = document.createElement('div');
-      part.className = 'bunji-prod-part';
-      part.textContent = `Part #: ${product.part}`;
-
-      const pricing = document.createElement('div');
-      pricing.className = 'bunji-prod-pricing';
-
-      const price = document.createElement('span');
-      price.className = 'bunji-prod-price';
-      price.textContent = product.price;
-      pricing.appendChild(price);
-
-      if (product.was) {
-        const was = document.createElement('span');
-        was.className = 'bunji-prod-was';
-        was.textContent = `was ${product.was}`;
-        pricing.appendChild(was);
-      }
-
-      const buyBtn = document.createElement('button');
-      buyBtn.className = 'bunji-buy-btn';
-      buyBtn.textContent = '🛒 BUY';
-      buyBtn.addEventListener('click', () => {
-        if (buyBtn.classList.contains('added')) return;
-        buyBtn.classList.add('added');
-        buyBtn.textContent = '✓ Added';
-        addBubble(`I want to buy: ${product.name} (Part #${product.part}) — ${product.price}`, 'user');
-        sendToBot(`I want to buy ${product.name}, Part number ${product.part}, price ${product.price} from the ${categoryName} category. Please guide me on how to complete this purchase.`);
-      });
-
-      body.appendChild(name);
-      body.appendChild(part);
-      body.appendChild(pricing);
-      body.appendChild(buyBtn);
-      card.appendChild(body);
-      list.appendChild(card);
-    });
-
     wrapper.appendChild(list);
+
+    // Loading indicator
+    const loadingEl = document.createElement('div');
+    loadingEl.style.cssText = 'text-align:center; color:#888; font-size:12px; padding:10px;';
+    loadingEl.textContent = 'Loading products...';
+    wrapper.appendChild(loadingEl);
+
     messagesEl.appendChild(wrapper);
     scrollBottom();
+
+    let currentPage = 1;
+    let hasMore = false;
+    const API_PRODUCTS = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:5001/api'
+      : 'https://kjr-backend.onrender.com/api';
+
+    async function loadPage(page) {
+      try {
+        const res = await fetch(`${API_PRODUCTS}/products/${encodeURIComponent(categoryName)}?page=${page}&limit=20`);
+        const data = await res.json();
+        loadingEl.remove();
+
+        const products = data.products || [];
+        hasMore = data.hasMore || false;
+
+        if (products.length === 0 && page === 1) {
+          // Fall back to local data if API returns nothing
+          const fallback = localProducts || getDefaultProducts(categoryName);
+          fallback.forEach(p => list.appendChild(buildCard(p, categoryName)));
+        } else {
+          products.forEach(p => list.appendChild(buildCard(p, categoryName)));
+        }
+
+        // Remove old load more button if exists
+        const oldBtn = wrapper.querySelector('.bunji-load-more');
+        if (oldBtn) oldBtn.remove();
+
+        // Add Load More button if there are more pages
+        if (hasMore) {
+          const loadMoreBtn = document.createElement('button');
+          loadMoreBtn.className = 'bunji-load-more';
+          loadMoreBtn.style.cssText = `
+            width:100%; margin-top:8px; padding:8px;
+            background:#fff; border:1.5px solid #cc0000; color:#cc0000;
+            border-radius:7px; font-size:12px; font-weight:700; cursor:pointer;
+          `;
+          loadMoreBtn.textContent = `Load More (Page ${page + 1} of ${data.pages})`;
+          loadMoreBtn.addEventListener('click', () => {
+            loadMoreBtn.textContent = 'Loading...';
+            loadMoreBtn.disabled = true;
+            currentPage++;
+            loadPage(currentPage);
+          });
+          wrapper.appendChild(loadMoreBtn);
+        }
+
+        // Show count
+        const countEl = document.createElement('div');
+        countEl.style.cssText = 'font-size:10px; color:#aaa; text-align:right; margin-top:4px;';
+        countEl.textContent = `Showing ${Math.min(page * 20, data.total)} of ${data.total} products`;
+        wrapper.appendChild(countEl);
+
+        scrollBottom();
+      } catch (err) {
+        loadingEl.textContent = '';
+        // Fall back to local data on error
+        const fallback = localProducts || getDefaultProducts(categoryName);
+        fallback.forEach(p => list.appendChild(buildCard(p, categoryName)));
+        scrollBottom();
+      }
+    }
+
+    await loadPage(1);
   }
 
   // ─── BOT COMMUNICATION ────────────────────────────────────────────────────
