@@ -200,9 +200,9 @@ router.get('/categories', (req, res) => {
 
 // Try Gemini with automatic model fallback and retry on 503 overload
 async function callGeminiWithFallback(chatHistory) {
-  const models = ['gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-1.5-flash-8b'];
-  const maxRetries = 3;
-  const retryDelayMs = 3000;
+  const models = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-2.5-flash'];
+  const maxRetries = 2;
+  const retryDelayMs = 2000;
 
   for (const model of models) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -215,9 +215,10 @@ async function callGeminiWithFallback(chatHistory) {
       } catch (err) {
         const msg = err?.message || '';
         const is503 = err?.status === 503 || msg.includes('503') || msg.includes('high demand') || msg.includes('UNAVAILABLE');
+        const is429 = err?.status === 429 || msg.includes('429') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED');
         console.warn(`Gemini [${model}] attempt ${attempt} failed: ${msg}`);
 
-        if (is503 && attempt < maxRetries) {
+        if ((is503 || is429) && attempt < maxRetries) {
           await new Promise(r => setTimeout(r, retryDelayMs));
           continue;
         }
