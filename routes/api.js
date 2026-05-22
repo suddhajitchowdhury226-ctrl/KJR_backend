@@ -10,6 +10,67 @@ const auth = require('../middleware/auth');
 const nodemailer = require('nodemailer');
 
 // --- PRODUCTS API ---
+
+// @route   GET api/products/vertical/:vertical
+// @desc    Get products by vertical (paginated, 20 per page)
+// @access  Public
+router.get('/products/vertical/:vertical', async (req, res) => {
+  try {
+    const vertical = decodeURIComponent(req.params.vertical);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const query = { vertical: { $regex: new RegExp('^' + vertical.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') } };
+
+    const [products, total] = await Promise.all([
+      Product.find(query).skip(skip).limit(limit).lean(),
+      Product.countDocuments(query)
+    ]);
+
+    res.json({
+      products,
+      total,
+      page,
+      pages: Math.ceil(total / limit),
+      hasMore: skip + products.length < total
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   GET api/products/brand/:brand  ← must be BEFORE /:category to avoid conflict
+// @desc    Get products by brand (paginated, 20 per page)
+// @access  Public
+router.get('/products/brand/:brand', async (req, res) => {
+  try {
+    const brand = decodeURIComponent(req.params.brand);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const query = { brand: { $regex: new RegExp('^' + brand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') } };
+
+    const [products, total] = await Promise.all([
+      Product.find(query).skip(skip).limit(limit).lean(),
+      Product.countDocuments(query)
+    ]);
+
+    res.json({
+      products,
+      total,
+      page,
+      pages: Math.ceil(total / limit),
+      hasMore: skip + products.length < total
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
 // @route   GET api/products/:category
 // @desc    Get products by category (paginated, 20 per page)
 // @access  Public

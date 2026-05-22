@@ -2,7 +2,6 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const Product = require('./models/Product');
 
-// ── All 68 categories ──────────────────────────────────────────────────────
 const CATEGORIES = [
   "Accumulators & Receivers", "Adhesives", "Air Cleaners", "Air Filters",
   "Airflow Accessories", "Blower Components", "Brazing & Soldering Supplies",
@@ -27,7 +26,36 @@ const CATEGORIES = [
   "Water Heaters"
 ];
 
-// ── Brands pool ────────────────────────────────────────────────────────────
+const CATEGORY_VERTICAL = {
+  "Accumulators & Receivers": "HVAC", "Adhesives": "HVAC", "Air Cleaners": "HVAC",
+  "Air Filters": "HVAC", "Airflow Accessories": "HVAC", "Blower Components": "HVAC",
+  "Brazing & Soldering Supplies": "HVAC", "Brazing & Soldering Tools": "Service Aids & Tools",
+  "Capacitors": "HVAC", "Caulking & Sealants": "HVAC", "Cleaners & Chemicals": "HVAC",
+  "Coils": "HVAC", "Compressor Parts": "HVAC", "Compressors": "HVAC",
+  "Condensate Drain Supplies": "HVAC", "Condensate Pumps": "HVAC", "Condenser Fan Motors": "HVAC",
+  "Connected Home": "Consumer Electronics", "Construction Supplies": "HVAC",
+  "Diffusers": "HVAC", "Double Shaft Motors": "HVAC", "Draft Inducer Motors": "HVAC",
+  "Ducting & Sheet Metal": "HVAC", "Electrical": "HVAC", "Electrical Controls": "HVAC",
+  "Evaporator and Blower Motors": "HVAC", "Exhaust & Supply Fans": "HVAC",
+  "Fan Blades": "HVAC", "Fasteners": "HVAC", "Filter - Driers": "HVAC",
+  "Fittings": "Plumbing", "Gas Heat Controls": "HVAC", "Grilles": "HVAC",
+  "Hand Tools": "Service Aids & Tools", "Heat & Energy Recovery Ventilation": "HVAC",
+  "Heat Pump Controls": "HVAC", "Inspection Tools": "Service Aids & Tools",
+  "Line Sets": "HVAC", "Miscellaneous Components": "HVAC", "Moisture Control & Zoning": "HVAC",
+  "Motor Accessories": "HVAC", "Mounting Supplies": "HVAC", "Non-HVAC Items": "Home Appliances",
+  "Oil Heat Controls": "HVAC", "Other Miscellaneous Installation Supplies": "HVAC",
+  "Other Specialty Tools": "Service Aids & Tools", "Pipe": "Plumbing",
+  "Power Tools": "Power Tool Parts", "Registers": "HVAC", "Refrigerant": "HVAC",
+  "Residential Air Handlers": "HVAC", "Residential Coils": "HVAC",
+  "Residential Equipment": "HVAC", "Residential Equipment Accessories": "HVAC",
+  "Residential Mini Split Accessories": "HVAC", "Safety": "Service Aids & Tools",
+  "Service Tools": "Service Aids & Tools", "Super Accessories": "HVAC", "Tape": "HVAC",
+  "Test Tools": "Service Aids & Tools", "Thermostat Guards & Thermostat Accessories": "HVAC",
+  "Thermostats": "HVAC", "Tool Storage": "Service Aids & Tools", "Ultraviolet": "HVAC",
+  "Unit Heaters": "HVAC", "Valves": "Plumbing", "Ventilators & Accessories": "HVAC",
+  "Water Heaters": "Plumbing"
+};
+
 const BRANDS = [
   'Rheem', 'Gemaire', 'Tradepro', 'Carrier', 'Trane', 'Lennox', 'York', 'Goodman',
   'Daikin', 'Mitsubishi', 'Honeywell', 'Emerson', 'Copeland', 'Danfoss', 'Parker',
@@ -36,7 +64,6 @@ const BRANDS = [
   'Century', 'Baldor', 'Leeson', 'Nidec', 'Ametek', 'Packard', 'Rotom'
 ];
 
-// ── Category-specific product templates ───────────────────────────────────
 const TEMPLATES = {
   "Accumulators & Receivers": { prefixes: ["Accumulator", "Receiver", "Suction Accumulator", "Bi-Flow Accumulator", "Vertical Receiver"], suffixes: ["1/2in", "3/8in", "5/8in", "7/8in", "1-1/8in"], priceRange: [25, 250] },
   "Adhesives": { prefixes: ["Duct Sealant", "Spray Adhesive", "Insulation Adhesive", "Seal Tack", "Air Lag Adhesive"], suffixes: ["1 Gal", "2 Gal", "5 Gal", "Tube", "12 Oz Can"], priceRange: [8, 120] },
@@ -51,7 +78,7 @@ const TEMPLATES = {
   "Cleaners & Chemicals": { prefixes: ["Coil Cleaner", "Condenser Cleaner", "Evaporator Cleaner", "Drain Pan Cleaner", "Refrigerant Oil"], suffixes: ["1 Gal", "Qt", "18 Oz Spray", "5 Gal", "Aerosol"], priceRange: [8, 120] },
   "Coils": { prefixes: ["Condenser Coil", "Evaporator Coil", "A-Coil", "Slab Coil", "Cased Coil"], suffixes: ["1.5 Ton", "2 Ton", "2.5 Ton", "3 Ton", "3.5 Ton", "4 Ton", "5 Ton"], priceRange: [150, 900] },
   "Compressor Parts": { prefixes: ["Crankcase Heater", "Rotalock Valve", "Start Relay", "Terminal Lead", "Wiring Harness"], suffixes: ["120V", "240V", "Universal", "OEM", "Kit"], priceRange: [10, 120] },
-  "Compressors": { prefixes: ["Scroll Compressor", "Reciprocating Compressor", "Rotary Compressor", "Inverter Compressor", "Remanufactured Scroll"], suffixes: ["1.5 Ton R-410A", "2 Ton R-410A", "2.5 Ton R-410A", "3 Ton R-410A", "4 Ton R-410A", "5 Ton R-22"], priceRange: [200, 1200] },
+  "Compressors": { prefixes: ["Scroll Compressor", "Reciprocating Compressor", "Rotary Compressor", "Inverter Compressor", "Remanufactured Scroll"], suffixes: ["1.5 Ton R-410A", "2 Ton R-410A", "2.5 Ton R-410A", "3 Ton R-410A", "4 Ton R-410A"], priceRange: [200, 1200] },
   "Condensate Drain Supplies": { prefixes: ["Drain Pan", "Condensate Pan", "Drain Line", "P-Trap", "Float Switch"], suffixes: ["14x14", "16x16", "20x20", "24x24", "Universal"], priceRange: [8, 80] },
   "Condensate Pumps": { prefixes: ["Mini Split Pump", "Standard Condensate Pump", "Inline Pump", "Safety Switch Pump", "Reservoir Pump"], suffixes: ["115V", "230V", "Universal", "1/30 HP", "1/50 HP"], priceRange: [30, 180] },
   "Condenser Fan Motors": { prefixes: ["Condenser Motor", "OEM Condenser Motor", "Aftermarket Motor", "Multi-HP Motor", "Replacement Motor"], suffixes: ["1/4 HP 208-230V", "1/3 HP 208-230V", "1/2 HP 208-230V", "1/6 HP 208-230V", "3/4 HP 460V"], priceRange: [40, 280] },
@@ -108,11 +135,9 @@ const TEMPLATES = {
   "Water Heaters": { prefixes: ["Water Heater Element", "Thermostat", "Anode Rod", "Pressure Relief Valve", "Dip Tube"], suffixes: ["240V", "4500W", "5500W", "3/4 In", "Universal"], priceRange: [8, 150] },
 };
 
-// ── Helpers ────────────────────────────────────────────────────────────────
 function rand(min, max) { return Math.random() * (max - min) + min; }
 function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 function roundPrice(n) { return Math.round(n * 100) / 100; }
-
 function generatePartNumber(category, index) {
   const prefix = category.replace(/[^A-Z]/gi, '').substring(0, 3).toUpperCase();
   const num = String(index).padStart(4, '0');
@@ -121,34 +146,25 @@ function generatePartNumber(category, index) {
 }
 
 function generateProduct(category, index) {
-  const tmpl = TEMPLATES[category] || {
-    prefixes: [category + ' Part', category + ' Component', category + ' Unit'],
-    suffixes: ['Standard', 'Heavy Duty', 'Universal', 'OEM', 'Replacement'],
-    priceRange: [10, 200]
-  };
-
+  const tmpl = TEMPLATES[category] || { prefixes: [category + ' Part'], suffixes: ['Standard', 'OEM', 'Universal'], priceRange: [10, 200] };
   const prefix = pick(tmpl.prefixes);
   const suffix = pick(tmpl.suffixes);
   const brand = pick(BRANDS);
   const price = roundPrice(rand(tmpl.priceRange[0], tmpl.priceRange[1]));
   const was = roundPrice(price * rand(1.08, 1.25));
-
   return {
     category,
+    vertical: CATEGORY_VERTICAL[category] || 'HVAC',
     name: `${brand} ${prefix} ${suffix}`,
     part: generatePartNumber(category, index),
-    price,
-    was,
-    brand,
+    price, was, brand,
     img: null,
     inStock: Math.random() > 0.15,
   };
 }
 
-// ── Seed ───────────────────────────────────────────────────────────────────
 async function seed() {
   try {
-    // Connect
     const uri = process.env.MONGODB_URI;
     if (uri && !uri.includes('YOUR_USER')) {
       await mongoose.connect(uri, { serverSelectionTimeoutMS: 8000 });
@@ -160,30 +176,22 @@ async function seed() {
       console.log('Connected to in-memory MongoDB');
     }
 
-    // Clear existing generated products (keep manually entered ones if any)
     await Product.deleteMany({});
     console.log('Cleared existing products');
 
     const TARGET = 10000;
-    const perCategory = Math.ceil(TARGET / CATEGORIES.length); // ~147 per category
+    const perCategory = Math.ceil(TARGET / CATEGORIES.length);
     const products = [];
-
     CATEGORIES.forEach(cat => {
-      for (let i = 0; i < perCategory; i++) {
-        products.push(generateProduct(cat, i + 1));
-      }
+      for (let i = 0; i < perCategory; i++) products.push(generateProduct(cat, i + 1));
     });
-
-    // Trim to exactly 10000
     const final = products.slice(0, TARGET);
 
-    // Insert in batches of 500
     const BATCH = 500;
     for (let i = 0; i < final.length; i += BATCH) {
       await Product.insertMany(final.slice(i, i + BATCH));
       process.stdout.write(`\rInserted ${Math.min(i + BATCH, final.length)} / ${final.length}`);
     }
-
     console.log(`\n✅ Seeded ${final.length} products across ${CATEGORIES.length} categories`);
     process.exit(0);
   } catch (err) {

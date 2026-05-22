@@ -284,6 +284,34 @@
     "Water Heaters"
   ];
 
+  // ─── ALL BRANDS A–Z ───────────────────────────────────────────────────────
+  const ALL_BRANDS = {
+    "A": ["AccuTemp", "Acer", "Acros", "Affresh", "Alto Shaam", "Amana", "American Range", "ACP", "Anets", "Antunes", "APM", "Ariens", "Astra", "ASUS", "Avanti", "Axis"],
+    "B": ["Bauknecht", "Baxter", "Beko", "Barkli", "Bertazzoni", "Beverage-Air", "Bizerba", "BKI", "Black+Decker", "Blomberg", "Bosch", "Bostitch", "Bowers & Wilkins", "Brastemp", "Braun", "Breville", "Briggs & Stratton"],
+    "C": ["Campbell Hausfeld", "Canarm", "Carrier", "CB", "Chicago Pneumatic", "Cleveland", "Crown", "Compaq", "Consul", "Continental", "Contherm", "Cornelius", "Cub Cadet", "Curtis"],
+    "D": ["Dacor", "Danby", "Deifield", "Dell", "DeLonghi", "Delta", "Denon", "DeWalt", "Dormont", "Dremel", "Dayton"],
+    "E": ["Edlund", "Electrolux", "Elica", "Emerson", "Echo", "Epson", "Eureka", "Evapure"],
+    "F": ["Federal", "Fisher & Paykel", "Follett", "Fri-Jado", "Frigidaire", "FTL"],
+    "G": ["Gaggenau", "Garland", "Gamko", "GE", "Genie", "Gibson", "Giles", "Gillette", "Globe", "Goodman", "Grindmaster"],
+    "H": ["Haier", "Hatco", "Henry Penny", "Hestan", "Hisense", "Hobart", "Homelite", "Honda", "Hoshizaki", "Hotpoint", "HP", "Huntington", "Husqvarna", "Hussmann", "Hydra-Cool"],
+    "I": ["Ice-O-Matic", "IKEA", "Indesit", "Ingersoll Rand", "Inovate"],
+    "J": ["Jade", "Jennair", "Jet", "JIBT"],
+    "K": ["Kairak", "Karcher", "Kason", "Kawasaki", "Kelon", "Kelvinator", "Kenmore", "KitchenAid", "Kohler", "Kolpak", "Konica Minolta", "Kool-It", "Krowne"],
+    "L": ["Lancer", "Lasko", "Lexmark", "Lenovo", "LG", "Liebherr", "La Cornue"],
+    "M": ["Magic Chef", "Magnavox", "Makita", "Manitowoc", "Marantz", "Marquardt", "Master-Bilt", "Maxell", "Maytag", "Menumaster", "Merco", "Mercyshef", "Metabo", "Metro", "Midgley", "Midea", "Miele", "Miller", "Milwaukee", "Mitsubishi", "Mueller", "Multiplex", "Murray"],
+    "N": ["Napoleon", "Nieco", "Norake", "Nu-Vu"],
+    "O": ["Olympus", "Onkyo", "Opal", "Oral-B"],
+    "P": ["P&F", "Panasonic", "Perlick", "Philco", "Philips", "Pitco", "Porter", "Poulan PRO", "Power Sonic", "Powermatic", "Paslode"],
+    "R": ["Rational", "Rhea", "Ridgid", "Robot Coupe", "Ryobi"],
+    "S": ["Saeco", "Salvajor", "Samsung", "Sanyo", "Schaerer", "Scotsman", "Senco", "Server", "Sharp", "Sirerra", "Shindaiwa", "Shuttle", "Silver King", "Simonelli", "Skil", "Smeg", "Snapper", "Sony", "Speedking", "Spaceman", "Speed Queen", "Stex", "Stoelting", "Structural Concepts"],
+    "T": ["Tappan", "TCL", "Thermador", "Toro", "Thunlsen", "Troy-Bilt", "Turbo Air", "TurboChef"],
+    "U": ["Ultrafryer", "Unic"],
+    "V": ["Victory", "Viking", "Vitamix", "Vivitek", "Vizio", "Vollrath", "Vulcan", "Vulkan"],
+    "W": ["Weber", "Whirlpool", "White Westinghouse", "Wilton", "Winco", "Winston", "Wood Stone"],
+    "Y": ["Yamaha", "Yard-Man", "Yummly"],
+    "Z": []
+  };
+
   // Grey placeholder when no image available
   const PLACEHOLDER = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect width='80' height='80' fill='%23f0f0f0' rx='6'/%3E%3Ctext x='40' y='44' font-family='Arial' font-size='10' fill='%23bbb' text-anchor='middle'%3ENo Image%3C/text%3E%3C/svg%3E`;
 
@@ -419,6 +447,55 @@
     }
     .bunji-buy-btn:hover { background: #a00000; }
     .bunji-buy-btn.added { background: #15803d; cursor: default; }
+
+    /* ── Brand grid ── */
+    .bunji-brand-wrapper {
+      align-self: flex-start; width: 100%;
+      background: #e2e8f0; border-radius: 8px;
+      border-bottom-left-radius: 0; padding: 12px;
+      box-sizing: border-box;
+    }
+    .bunji-brand-title { font-weight:700; color:#cc0000; font-size:13px; margin-bottom:6px; }
+    .bunji-brand-sub   { font-size:11px; color:#64748b; margin-bottom:10px; }
+    .bunji-alpha-row   { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:10px; }
+    .bunji-alpha-btn {
+      width:26px; height:26px; border-radius:5px;
+      background:#cc0000; color:#fff; border:none;
+      font-size:12px; font-weight:700; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      transition:background 0.15s;
+    }
+    .bunji-alpha-btn:hover  { background:#a00000; }
+    .bunji-alpha-btn.empty  { background:#ddd; color:#aaa; cursor:default; pointer-events:none; }
+    .bunji-brand-sections   { max-height:260px; overflow-y:auto; }
+    .bunji-brand-section    { margin-bottom:8px; }
+    .bunji-brand-letter     { font-size:11px; font-weight:700; color:#888; border-bottom:1px solid #ddd; padding-bottom:2px; margin-bottom:4px; }
+    .bunji-brand-list       { display:flex; flex-wrap:wrap; gap:5px; }
+    .bunji-brand-btn {
+      background:#fff; border:1.5px solid #cc0000; color:#cc0000;
+      border-radius:6px; padding:5px 10px; font-size:11.5px;
+      cursor:pointer; font-weight:600;
+      transition:background 0.15s, color 0.15s;
+    }
+    .bunji-brand-btn:hover  { background:#cc0000; color:#fff; }
+
+    /* ── Vertical grid ── */
+    .bunji-vert-wrapper {
+      align-self: flex-start; width: 100%;
+      background: #e2e8f0; border-radius: 8px;
+      border-bottom-left-radius: 0; padding: 12px;
+      box-sizing: border-box;
+    }
+    .bunji-vert-title { font-weight:700; color:#cc0000; font-size:13px; margin-bottom:4px; }
+    .bunji-vert-sub   { font-size:11px; color:#64748b; margin-bottom:10px; }
+    .bunji-vert-grid  { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    .bunji-vert-btn {
+      background:#fff; border:1.5px solid #cc0000; color:#cc0000;
+      border-radius:8px; padding:9px 8px; font-size:11.5px;
+      cursor:pointer; text-align:center; font-weight:700;
+      transition:background 0.15s, color 0.15s; line-height:1.3;
+    }
+    .bunji-vert-btn:hover { background:#cc0000; color:#fff; }
 
     /* ── Typing ── */
     .bunji-typing-indicator {
@@ -699,6 +776,303 @@
     await loadPage(1);
   }
 
+  // ─── BRAND GRID ──────────────────────────────────────────────────────────
+  function renderBrandGrid() {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'bunji-brand-wrapper';
+
+    const title = document.createElement('div');
+    title.className = 'bunji-brand-title';
+    title.textContent = '🏷️ Browse by Brand — Select a Letter:';
+    wrapper.appendChild(title);
+
+    const sub = document.createElement('div');
+    sub.className = 'bunji-brand-sub';
+    sub.textContent = '350+ brands available · Click a letter to see brands';
+    wrapper.appendChild(sub);
+
+    // A–Z letter buttons
+    const alphaRow = document.createElement('div');
+    alphaRow.className = 'bunji-alpha-row';
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    letters.forEach(letter => {
+      const btn = document.createElement('button');
+      btn.className = 'bunji-alpha-btn' + (ALL_BRANDS[letter] && ALL_BRANDS[letter].length ? '' : ' empty');
+      btn.textContent = letter;
+      if (ALL_BRANDS[letter] && ALL_BRANDS[letter].length) {
+        btn.addEventListener('click', () => {
+          // Scroll brand sections to that letter
+          const target = sectionsEl.querySelector(`[data-letter="${letter}"]`);
+          if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
+      alphaRow.appendChild(btn);
+    });
+    wrapper.appendChild(alphaRow);
+
+    // All brand sections A–Z
+    const sectionsEl = document.createElement('div');
+    sectionsEl.className = 'bunji-brand-sections';
+
+    Object.entries(ALL_BRANDS).forEach(([letter, brands]) => {
+      if (!brands.length) return;
+      const section = document.createElement('div');
+      section.className = 'bunji-brand-section';
+      section.setAttribute('data-letter', letter);
+
+      const letterEl = document.createElement('div');
+      letterEl.className = 'bunji-brand-letter';
+      letterEl.textContent = letter;
+      section.appendChild(letterEl);
+
+      const listEl = document.createElement('div');
+      listEl.className = 'bunji-brand-list';
+
+      brands.forEach(brand => {
+        const btn = document.createElement('button');
+        btn.className = 'bunji-brand-btn';
+        btn.textContent = brand;
+        btn.addEventListener('click', () => {
+          addBubble(`Brand: ${brand}`, 'user');
+          renderBrandProducts(brand);
+        });
+        listEl.appendChild(btn);
+      });
+
+      section.appendChild(listEl);
+      sectionsEl.appendChild(section);
+    });
+
+    wrapper.appendChild(sectionsEl);
+    messagesEl.appendChild(wrapper);
+    scrollBottom();
+  }
+
+  // ─── BRAND PRODUCTS ───────────────────────────────────────────────────────
+  async function renderBrandProducts(brandName) {
+    const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:5001/api'
+      : 'https://kjr-backend.onrender.com/api';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'bunji-prod-wrapper';
+
+    const title = document.createElement('div');
+    title.className = 'bunji-prod-title';
+    title.textContent = `🏷️ ${brandName} Products`;
+    wrapper.appendChild(title);
+
+    const sub = document.createElement('div');
+    sub.className = 'bunji-prod-sub';
+    sub.textContent = '100% genuine parts · Fast shipping';
+    wrapper.appendChild(sub);
+
+    const list = document.createElement('div');
+    list.className = 'bunji-prod-list';
+    wrapper.appendChild(list);
+
+    const loadingEl = document.createElement('div');
+    loadingEl.style.cssText = 'text-align:center; color:#888; font-size:12px; padding:10px;';
+    loadingEl.textContent = `Loading ${brandName} products...`;
+    wrapper.appendChild(loadingEl);
+
+    messagesEl.appendChild(wrapper);
+    scrollBottom();
+
+    let currentPage = 1;
+
+    async function loadPage(page) {
+      try {
+        const res = await fetch(`${API_BASE}/products/brand/${encodeURIComponent(brandName)}?page=${page}&limit=20`);
+        const data = await res.json();
+        loadingEl.remove();
+
+        const products = data.products || [];
+
+        if (products.length === 0 && page === 1) {
+          const emptyEl = document.createElement('div');
+          emptyEl.style.cssText = 'color:#888; font-size:12px; padding:8px; text-align:center;';
+          emptyEl.textContent = `No products found for "${brandName}" yet. Check back soon!`;
+          list.appendChild(emptyEl);
+        } else {
+          products.forEach(p => list.appendChild(buildCard(p, p.category)));
+        }
+
+        // Remove old load more
+        const oldBtn = wrapper.querySelector('.bunji-load-more');
+        if (oldBtn) oldBtn.remove();
+        const oldCount = wrapper.querySelector('.bunji-prod-count');
+        if (oldCount) oldCount.remove();
+
+        if (data.hasMore) {
+          const loadMoreBtn = document.createElement('button');
+          loadMoreBtn.className = 'bunji-load-more';
+          loadMoreBtn.style.cssText = 'width:100%; margin-top:8px; padding:8px; background:#fff; border:1.5px solid #cc0000; color:#cc0000; border-radius:7px; font-size:12px; font-weight:700; cursor:pointer;';
+          loadMoreBtn.textContent = `Load More (Page ${page + 1} of ${data.pages})`;
+          loadMoreBtn.addEventListener('click', () => {
+            loadMoreBtn.textContent = 'Loading...';
+            loadMoreBtn.disabled = true;
+            currentPage++;
+            loadPage(currentPage);
+          });
+          wrapper.appendChild(loadMoreBtn);
+        }
+
+        const countEl = document.createElement('div');
+        countEl.className = 'bunji-prod-count';
+        countEl.style.cssText = 'font-size:10px; color:#aaa; text-align:right; margin-top:4px;';
+        countEl.textContent = `Showing ${Math.min(page * 20, data.total)} of ${data.total} products`;
+        wrapper.appendChild(countEl);
+
+        scrollBottom();
+      } catch (err) {
+        loadingEl.textContent = `Could not load ${brandName} products. Please try again.`;
+        scrollBottom();
+      }
+    }
+
+    await loadPage(1);
+  }
+
+  // ─── VERTICALS ────────────────────────────────────────────────────────────
+  const VERTICALS = [
+    { name: "Auto & Garage", icon: "🚗" },
+    { name: "Grills & Outdoor Kitchen", icon: "🔥" },
+    { name: "Consumer Electronics", icon: "📺" },
+    { name: "Commercial Appliance", icon: "🏪" },
+    { name: "Coffee & Small Appliance", icon: "☕" },
+    { name: "Computer & Tablet", icon: "💻" },
+    { name: "HVAC", icon: "❄️" },
+    { name: "Home Appliances", icon: "🏠" },
+    { name: "Health & Wellness", icon: "💊" },
+    { name: "Lawn & Garden", icon: "🌿" },
+    { name: "Mobile", icon: "📱" },
+    { name: "Power Tool Parts", icon: "🔧" },
+    { name: "Personal Care", icon: "✂️" },
+    { name: "Plumbing", icon: "🔩" },
+    { name: "Print & Imaging", icon: "🖨️" },
+    { name: "Pool & Spa", icon: "🏊" },
+    { name: "Service Aids & Tools", icon: "🛠️" },
+    { name: "Vacuum", icon: "🌀" },
+  ];
+
+  function renderVerticalGrid() {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'bunji-vert-wrapper';
+
+    const title = document.createElement('div');
+    title.className = 'bunji-vert-title';
+    title.textContent = '🗂️ Browse by Vertical — Select a Department:';
+    wrapper.appendChild(title);
+
+    const sub = document.createElement('div');
+    sub.className = 'bunji-vert-sub';
+    sub.textContent = '18 departments · Millions of genuine parts';
+    wrapper.appendChild(sub);
+
+    const grid = document.createElement('div');
+    grid.className = 'bunji-vert-grid';
+
+    VERTICALS.forEach(v => {
+      const btn = document.createElement('button');
+      btn.className = 'bunji-vert-btn';
+      btn.textContent = `${v.icon} ${v.name}`;
+      btn.addEventListener('click', () => {
+        addBubble(`Vertical: ${v.name}`, 'user');
+        renderVerticalProducts(v.name, v.icon);
+      });
+      grid.appendChild(btn);
+    });
+
+    wrapper.appendChild(grid);
+    messagesEl.appendChild(wrapper);
+    scrollBottom();
+  }
+
+  async function renderVerticalProducts(verticalName, icon) {
+    const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:5001/api'
+      : 'https://kjr-backend.onrender.com/api';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'bunji-prod-wrapper';
+
+    const title = document.createElement('div');
+    title.className = 'bunji-prod-title';
+    title.textContent = `${icon || '🗂️'} ${verticalName}`;
+    wrapper.appendChild(title);
+
+    const sub = document.createElement('div');
+    sub.className = 'bunji-prod-sub';
+    sub.textContent = '100% genuine parts · Fast shipping · 350+ brands';
+    wrapper.appendChild(sub);
+
+    const list = document.createElement('div');
+    list.className = 'bunji-prod-list';
+    wrapper.appendChild(list);
+
+    const loadingEl = document.createElement('div');
+    loadingEl.style.cssText = 'text-align:center; color:#888; font-size:12px; padding:10px;';
+    loadingEl.textContent = `Loading ${verticalName} products...`;
+    wrapper.appendChild(loadingEl);
+
+    messagesEl.appendChild(wrapper);
+    scrollBottom();
+
+    let currentPage = 1;
+
+    async function loadPage(page) {
+      try {
+        const res = await fetch(`${API_BASE}/products/vertical/${encodeURIComponent(verticalName)}?page=${page}&limit=20`);
+        const data = await res.json();
+        loadingEl.remove();
+
+        const products = data.products || [];
+
+        if (products.length === 0 && page === 1) {
+          const emptyEl = document.createElement('div');
+          emptyEl.style.cssText = 'color:#888; font-size:12px; padding:8px; text-align:center;';
+          emptyEl.textContent = `No products found for "${verticalName}" yet. Check back soon!`;
+          list.appendChild(emptyEl);
+        } else {
+          products.forEach(p => list.appendChild(buildCard(p, p.category)));
+        }
+
+        const oldBtn = wrapper.querySelector('.bunji-load-more');
+        if (oldBtn) oldBtn.remove();
+        const oldCount = wrapper.querySelector('.bunji-prod-count');
+        if (oldCount) oldCount.remove();
+
+        if (data.hasMore) {
+          const loadMoreBtn = document.createElement('button');
+          loadMoreBtn.className = 'bunji-load-more';
+          loadMoreBtn.style.cssText = 'width:100%; margin-top:8px; padding:8px; background:#fff; border:1.5px solid #cc0000; color:#cc0000; border-radius:7px; font-size:12px; font-weight:700; cursor:pointer;';
+          loadMoreBtn.textContent = `Load More (Page ${page + 1} of ${data.pages})`;
+          loadMoreBtn.addEventListener('click', () => {
+            loadMoreBtn.textContent = 'Loading...';
+            loadMoreBtn.disabled = true;
+            currentPage++;
+            loadPage(currentPage);
+          });
+          wrapper.appendChild(loadMoreBtn);
+        }
+
+        const countEl = document.createElement('div');
+        countEl.className = 'bunji-prod-count';
+        countEl.style.cssText = 'font-size:10px; color:#aaa; text-align:right; margin-top:4px;';
+        countEl.textContent = `Showing ${Math.min(page * 20, data.total)} of ${data.total} products`;
+        wrapper.appendChild(countEl);
+
+        scrollBottom();
+      } catch (err) {
+        loadingEl.textContent = `Could not load ${verticalName} products. Please try again.`;
+        scrollBottom();
+      }
+    }
+
+    await loadPage(1);
+  }
+
   // ─── BOT COMMUNICATION ────────────────────────────────────────────────────
   async function sendToBot(text) {
     showTyping();
@@ -728,7 +1102,7 @@
     if (!trimmed) return;
     inputEl.value = '';
 
-    // ── Press 5: show category grid, do NOT call bot ──
+    // ── Press 5: show category grid ──
     if (trimmed === '5') {
       addBubble('5', 'user');
       addBubble(
@@ -739,10 +1113,35 @@
         'bunji'
       );
       renderCategoryGrid();
-      return; // ← no bot call
+      return;
     }
 
-    // ── Typing a number 1–68 while grid is visible ──
+    // ── "brand" / "brands" keyword: show brand grid ──
+    const lower = trimmed.toLowerCase();
+    if (lower === 'brand' || lower === 'brands' || lower === 'show brands' || lower === 'view brands') {
+      addBubble(trimmed, 'user');
+      addBubble(
+        '🏷️ Browse all our brands below!\n' +
+        'We carry 350+ trusted brands. Click any brand to see its products:',
+        'bunji'
+      );
+      renderBrandGrid();
+      return;
+    }
+
+    // ── "vertical" / "verticals" keyword: show vertical grid ──
+    if (lower === 'vertical' || lower === 'verticals' || lower === 'department' || lower === 'departments' || lower === 'show verticals') {
+      addBubble(trimmed, 'user');
+      addBubble(
+        '🗂️ Browse by Department!\n' +
+        'We cover 18 product verticals. Click any department to see its products:',
+        'bunji'
+      );
+      renderVerticalGrid();
+      return;
+    }
+
+    // ── Typing a number 1–68 while category grid is visible ──
     const num = parseInt(trimmed);
     if (!isNaN(num) && num >= 1 && num <= 68 && showingCategories) {
       showingCategories = false;
