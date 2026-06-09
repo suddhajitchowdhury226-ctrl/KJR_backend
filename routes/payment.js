@@ -10,7 +10,7 @@ const ANET_HOST = 'api.authorize.net';          // production
 // const ANET_HOST = 'apitest.authorize.net';   // sandbox
 
 function getAnetHost() {
-  return (process.env.AUTHORIZENET_ENVIRONMENT || 'SANDBOX').toUpperCase() === 'PRODUCTION'
+  return (process.env.AUTHORIZENET_ENVIRONMENT || 'PRODUCTION').toUpperCase() === 'PRODUCTION'
     ? 'api.authorize.net'
     : 'apitest.authorize.net';
 }
@@ -56,7 +56,7 @@ router.get('/config', (req, res) => {
   res.json({
     apiLoginId:      process.env.AUTHORIZENET_API_LOGIN_ID,
     publicClientKey: process.env.AUTHORIZENET_PUBLIC_CLIENT_KEY,
-    environment:     (process.env.AUTHORIZENET_ENVIRONMENT || 'SANDBOX').toUpperCase()
+    environment:     (process.env.AUTHORIZENET_ENVIRONMENT || 'PRODUCTION').toUpperCase()
   });
 });
 
