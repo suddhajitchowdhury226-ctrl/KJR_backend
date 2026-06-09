@@ -164,14 +164,16 @@ router.post('/charge', async (req, res) => {
       const txn = data.transactionResponse;
 
       if (txn && txn.responseCode === '1') {
-        // ✅ Approved
-        console.log('[Payment] ✅ Approved — TransID:', txn.transId, ' AuthCode:', txn.authCode);
+        // ✅ Approved (may be test mode if transId === '0')
+        const isTestMode = txn.transId === '0' || txn.transId === 0;
+        console.log('[Payment]', isTestMode ? '🧪 TEST MODE' : '✅', 'Approved — TransID:', txn.transId, ' AuthCode:', txn.authCode);
         return res.json({
           success:       true,
           transactionId: txn.transId,
           authCode:      txn.authCode,
           message:       (txn.messages && txn.messages[0] && txn.messages[0].description) || 'Approved',
-          invoiceNumber: invoiceNum
+          invoiceNumber: invoiceNum,
+          testMode:      isTestMode
         });
       } else {
         // Declined
@@ -185,9 +187,14 @@ router.post('/charge', async (req, res) => {
       }
     } else {
       // API-level error (bad credentials, invalid token, etc.)
-      const errText = data.messages && data.messages.message && data.messages.message[0]
+      let errText = data.messages && data.messages.message && data.messages.message[0]
         ? data.messages.message[0].text
         : 'Payment gateway error.';
+      // If token is invalid and account is in test mode, give a clear message
+      if (errText && errText.toLowerCase().includes('token')) {
+        errText = 'Payment token error. If your Authorize.net account is in Test Mode, ' +
+                  'disable it at account.authorize.net → Account → Settings → Test Mode.';
+      }
       console.error('[Payment] ❌ API error:', errText);
       return res.status(400).json({ success: false, message: errText });
     }
