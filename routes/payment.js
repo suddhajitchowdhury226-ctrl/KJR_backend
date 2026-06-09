@@ -6,11 +6,12 @@ const express = require('express');
 const router  = require('express').Router();
 const https   = require('https');
 
-// Credentials — hardcoded fallbacks so Render works without env vars
-const ANET_API_LOGIN_ID      = process.env.AUTHORIZENET_API_LOGIN_ID      || '9s47Tn5Mh';
-const ANET_TRANSACTION_KEY   = process.env.AUTHORIZENET_TRANSACTION_KEY   || '7R4xK6Cy8k6Za6x6';
-const ANET_PUBLIC_CLIENT_KEY = process.env.AUTHORIZENET_PUBLIC_CLIENT_KEY || '5pg7V9Q99T4GTnu9rWKGen384Gyg7H3frMnFgNfBByN9pTcMZreJeM22fy56LnRd';
-const ANET_ENVIRONMENT       = (process.env.AUTHORIZENET_ENVIRONMENT      || 'PRODUCTION').toUpperCase();
+// Credentials — explicit fallbacks handle both missing AND empty-string env vars
+function envOr(key, fallback) { const v = process.env[key]; return (v && v.trim()) ? v.trim() : fallback; }
+const ANET_API_LOGIN_ID      = envOr('AUTHORIZENET_API_LOGIN_ID',      '9s47Tn5Mh');
+const ANET_TRANSACTION_KEY   = envOr('AUTHORIZENET_TRANSACTION_KEY',   '7R4xK6Cy8k6Za6x6');
+const ANET_PUBLIC_CLIENT_KEY = envOr('AUTHORIZENET_PUBLIC_CLIENT_KEY', '5pg7V9Q99T4GTnu9rWKGen384Gyg7H3frMnFgNfBByN9pTcMZreJeM22fy56LnRd');
+const ANET_ENVIRONMENT       = envOr('AUTHORIZENET_ENVIRONMENT',       'PRODUCTION').toUpperCase();
 
 function getAnetHost() {
   return ANET_ENVIRONMENT === 'PRODUCTION'
@@ -60,6 +61,21 @@ router.get('/config', (req, res) => {
     apiLoginId:      ANET_API_LOGIN_ID,
     publicClientKey: ANET_PUBLIC_CLIENT_KEY,
     environment:     ANET_ENVIRONMENT
+  });
+});
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/payment/debug  — temporary: shows resolved credential state
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/debug', (req, res) => {
+  res.json({
+    apiLoginId:      ANET_API_LOGIN_ID,
+    publicClientKey: ANET_PUBLIC_CLIENT_KEY ? ANET_PUBLIC_CLIENT_KEY.substring(0,8)+'...' : 'MISSING',
+    transactionKey:  ANET_TRANSACTION_KEY   ? ANET_TRANSACTION_KEY.substring(0,4)+'****'  : 'MISSING',
+    environment:     ANET_ENVIRONMENT,
+    rawEnvLoginId:   process.env.AUTHORIZENET_API_LOGIN_ID   || '(not set)',
+    rawEnvTxKey:     process.env.AUTHORIZENET_TRANSACTION_KEY ? '(set)' : '(not set)'
   });
 });
 
