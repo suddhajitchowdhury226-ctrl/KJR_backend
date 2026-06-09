@@ -91,5 +91,5 @@ app.get('/health', (req, res) => {
 
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
-  console.log(`🚀 KJR Backend running on http://localhost:${PORT}`);
+  console.log(`🚀 KJR Backend running on http://localhost:${PORT} [2026-06-10 00:25]`);
 });
