@@ -1,31 +1,56 @@
 /**
- * routes/payment.js  —  Authorize.net Accept.js charge endpoint
- *
- * Flow:
- *   1. Frontend tokenises card data with Authorize.net Accept.js (PCI-compliant)
- *   2. Frontend POSTs the opaque nonce + order data here
- *   3. We call Authorize.net createTransactionRequest (authCapture)
- *   4. We return transaction result to the frontend
+ * routes/payment.js  —  Authorize.net JSON API (Node built-in https, no deps)
  */
 
-const express           = require('express');
-const router            = express.Router();
-const AuthorizenetSDK   = require('authorizenet');
+const express = require('express');
+const router  = require('express').Router();
+const https   = require('https');
 
-const ApiContracts   = AuthorizenetSDK.APIContracts;
-const ApiControllers = AuthorizenetSDK.APIControllers;
-const SDKConstants   = AuthorizenetSDK.Constants;
+const ANET_HOST = 'api.authorize.net';          // production
+// const ANET_HOST = 'apitest.authorize.net';   // sandbox
 
-function getEnvironment() {
+function getAnetHost() {
   return (process.env.AUTHORIZENET_ENVIRONMENT || 'SANDBOX').toUpperCase() === 'PRODUCTION'
-    ? SDKConstants.endpoint.production
-    : SDKConstants.endpoint.sandbox;
+    ? 'api.authorize.net'
+    : 'apitest.authorize.net';
+}
+
+/** POST JSON to Authorize.net — returns parsed response object */
+function anetPost(bodyObj) {
+  return new Promise((resolve, reject) => {
+    const bodyStr = JSON.stringify(bodyObj);
+    const options = {
+      hostname: getAnetHost(),
+      path:     '/xml/v1/request.api',
+      method:   'POST',
+      headers:  {
+        'Content-Type':   'application/json',
+        'Content-Length': Buffer.byteLength(bodyStr)
+      }
+    };
+
+    const req = https.request(options, (res) => {
+      let raw = '';
+      res.on('data', chunk => { raw += chunk; });
+      res.on('end', () => {
+        try {
+          // Strip BOM if present
+          resolve(JSON.parse(raw.replace(/^\uFEFF/, '')));
+        } catch (e) {
+          reject(new Error('Invalid JSON from Authorize.net: ' + raw.substring(0, 100)));
+        }
+      });
+    });
+
+    req.on('error', reject);
+    req.setTimeout(15000, () => { req.destroy(); reject(new Error('Request timeout')); });
+    req.write(bodyStr);
+    req.end();
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/payment/config
-// Returns the public client key so the frontend can initialise Accept.js
-// (Safe to expose — the Public Client Key is designed to be public-facing)
 // ─────────────────────────────────────────────────────────────────────────────
 router.get('/config', (req, res) => {
   res.json({
@@ -46,7 +71,7 @@ router.post('/charge', async (req, res) => {
     invoiceNumber, description, cartItems
   } = req.body;
 
-  // Basic validation
+  // Validation
   if (!opaqueDataDescriptor || !opaqueDataValue)
     return res.status(400).json({ success: false, message: 'Payment token missing. Please try again.' });
 
@@ -57,115 +82,100 @@ router.post('/charge', async (req, res) => {
   if (!firstName || !lastName || !email)
     return res.status(400).json({ success: false, message: 'Customer information is incomplete.' });
 
-  // Merchant auth
-  const merchantAuth = new ApiContracts.MerchantAuthenticationType();
-  merchantAuth.setName(process.env.AUTHORIZENET_API_LOGIN_ID);
-  merchantAuth.setTransactionKey(process.env.AUTHORIZENET_TRANSACTION_KEY);
+  // Build line items
+  const lineItems = Array.isArray(cartItems) && cartItems.length > 0
+    ? cartItems.slice(0, 30).map((item, idx) => ({
+        itemId:      String(idx + 1),
+        name:        (item.name || 'Item').substring(0, 31),
+        description: (item.part || '').substring(0, 255),
+        quantity:    String(item.qty || 1),
+        unitPrice:   String(parseFloat((item.price || '0').replace(/[^0-9.]/g, '')) || 0)
+      }))
+    : null;
 
-  // Opaque (tokenised) card data from Accept.js
-  const opaqueData = new ApiContracts.OpaqueDataType();
-  opaqueData.setDataDescriptor(opaqueDataDescriptor);
-  opaqueData.setDataValue(opaqueDataValue);
+  const invoiceNum = (invoiceNumber || ('KJR-' + Date.now())).substring(0, 20);
 
-  const paymentType = new ApiContracts.PaymentType();
-  paymentType.setOpaqueData(opaqueData);
-
-  // Order
-  const orderDetails = new ApiContracts.OrderType();
-  orderDetails.setInvoiceNumber((invoiceNumber || ('KJR-' + Date.now())).substring(0, 20));
-  orderDetails.setDescription((description || 'KJR Interior Designs Order').substring(0, 255));
-
-  // Line items (up to 30)
-  if (Array.isArray(cartItems) && cartItems.length > 0) {
-    const lineItemsArr = new ApiContracts.ArrayOfLineItem();
-    const items = cartItems.slice(0, 30).map((item, idx) => {
-      const li = new ApiContracts.LineItemType();
-      li.setItemId(String(idx + 1));
-      li.setName((item.name || 'Item').substring(0, 31));
-      li.setDescription((item.part || '').substring(0, 255));
-      li.setQuantity(String(item.qty || 1));
-      li.setUnitPrice(String(parseFloat((item.price || '0').replace(/[^0-9.]/g, '')) || 0));
-      return li;
-    });
-    lineItemsArr.setLineItem(items);
-  }
-
-  // Customer
-  const customerData = new ApiContracts.CustomerDataType();
-  customerData.setType(ApiContracts.CustomerTypeEnum.individual);
-  customerData.setEmail(email);
-
-  // Billing address
-  const billTo = new ApiContracts.CustomerAddressType();
-  billTo.setFirstName(firstName.substring(0, 50));
-  billTo.setLastName(lastName.substring(0, 50));
-  if (company) billTo.setCompany(company.substring(0, 50));
-  if (address) billTo.setAddress(address.substring(0, 60));
-  if (city)    billTo.setCity(city.substring(0, 40));
-  if (state)   billTo.setState(state.substring(0, 40));
-  if (zip)     billTo.setZip(zip.substring(0, 20));
-  billTo.setCountry('US');
-  if (phone)   billTo.setPhoneNumber(phone.replace(/\D/g, '').substring(0, 25));
-
-  // Transaction request
-  const transactionRequest = new ApiContracts.TransactionRequestType();
-  transactionRequest.setTransactionType(ApiContracts.TransactionTypeEnum.authCaptureTransaction);
-  transactionRequest.setPayment(paymentType);
-  transactionRequest.setAmount(parsedAmount.toFixed(2));
-  transactionRequest.setOrder(orderDetails);
-  transactionRequest.setCustomer(customerData);
-  transactionRequest.setBillTo(billTo);
-
-  const createRequest = new ApiContracts.CreateTransactionRequest();
-  createRequest.setMerchantAuthentication(merchantAuth);
-  createRequest.setTransactionRequest(transactionRequest);
-
-  const ctrl = new ApiControllers.CreateTransactionController(createRequest.getJSON());
-  ctrl.setEnvironment(getEnvironment());
-
-  return new Promise((resolve) => {
-    ctrl.execute(() => {
-      try {
-        const apiResponse = ctrl.getResponse();
-        const response    = new ApiContracts.CreateTransactionResponse(apiResponse);
-
-        if (!response) {
-          res.status(502).json({ success: false, message: 'No response from payment gateway.' });
-          return resolve();
-        }
-
-        const messages   = response.getMessages();
-        const resultCode = messages.getResultCode();
-
-        if (resultCode === ApiContracts.MessageTypeEnum.OK) {
-          const txnResponse = response.getTransactionResponse();
-          const txnMsgs     = txnResponse ? txnResponse.getMessages() : null;
-
-          if (txnResponse && txnMsgs) {
-            const transId  = txnResponse.getTransId();
-            const authCode = txnResponse.getAuthCode();
-            const msgText  = txnMsgs.getMessage()[0].getDescription();
-            console.log('[Payment] Approved — TransID:', transId, ' AuthCode:', authCode);
-            res.json({ success: true, transactionId: transId, authCode, message: msgText,
-                       invoiceNumber: invoiceNumber || ('KJR-' + Date.now()) });
-          } else {
-            const errMsgs = txnResponse ? txnResponse.getErrors() : null;
-            const errText = errMsgs ? errMsgs.getError()[0].getErrorText() : 'Transaction declined.';
-            console.warn('[Payment] Declined:', errText);
-            res.status(402).json({ success: false, message: errText });
+  const payload = {
+    createTransactionRequest: {
+      merchantAuthentication: {
+        name:           process.env.AUTHORIZENET_API_LOGIN_ID,
+        transactionKey: process.env.AUTHORIZENET_TRANSACTION_KEY
+      },
+      refId: invoiceNum,
+      transactionRequest: {
+        transactionType: 'authCaptureTransaction',
+        amount:          parsedAmount.toFixed(2),
+        payment: {
+          opaqueData: {
+            dataDescriptor: opaqueDataDescriptor,
+            dataValue:      opaqueDataValue
           }
-        } else {
-          const errText = messages.getMessage()[0].getText();
-          console.error('[Payment] API error:', resultCode, errText);
-          res.status(400).json({ success: false, message: errText });
+        },
+        order: {
+          invoiceNumber: invoiceNum,
+          description:   (description || 'KJR Interior Designs Order').substring(0, 255)
+        },
+        ...(lineItems ? { lineItems: { lineItem: lineItems } } : {}),
+        billTo: {
+          firstName:  firstName.substring(0, 50),
+          lastName:   lastName.substring(0, 50),
+          ...(company ? { company:     company.substring(0, 50) } : {}),
+          ...(address ? { address:     address.substring(0, 60) } : {}),
+          ...(city    ? { city:        city.substring(0, 40)    } : {}),
+          ...(state   ? { state:       state.substring(0, 40)   } : {}),
+          ...(zip     ? { zip:         zip.substring(0, 20)     } : {}),
+          country:    'US',
+          ...(phone   ? { phoneNumber: phone.replace(/\D/g, '').substring(0, 25) } : {})
+        },
+        userFields: {
+          userField: [{ name: 'source', value: 'KJR-Website' }]
         }
-      } catch (err) {
-        console.error('[Payment] Exception:', err);
-        res.status(500).json({ success: false, message: 'Internal server error processing payment.' });
       }
-      resolve();
-    });
-  });
+    }
+  };
+
+  try {
+    const data = await anetPost(payload);
+
+    const resultCode = data.messages && data.messages.resultCode;
+    console.log('[Payment] Authorize.net resultCode:', resultCode);
+
+    if (resultCode === 'Ok') {
+      const txn = data.transactionResponse;
+
+      if (txn && txn.responseCode === '1') {
+        // ✅ Approved
+        console.log('[Payment] ✅ Approved — TransID:', txn.transId, ' AuthCode:', txn.authCode);
+        return res.json({
+          success:       true,
+          transactionId: txn.transId,
+          authCode:      txn.authCode,
+          message:       (txn.messages && txn.messages[0] && txn.messages[0].description) || 'Approved',
+          invoiceNumber: invoiceNum
+        });
+      } else {
+        // Declined
+        const errText = txn && txn.errors && txn.errors[0]
+          ? txn.errors[0].errorText
+          : txn && txn.responseCode === '2' ? 'Card declined by your bank.'
+          : txn && txn.responseCode === '3' ? 'Card error — please check your details.'
+          : 'Transaction declined.';
+        console.warn('[Payment] ⚠️  Declined (code', txn && txn.responseCode, '):', errText);
+        return res.status(402).json({ success: false, message: errText });
+      }
+    } else {
+      // API-level error (bad credentials, invalid token, etc.)
+      const errText = data.messages && data.messages.message && data.messages.message[0]
+        ? data.messages.message[0].text
+        : 'Payment gateway error.';
+      console.error('[Payment] ❌ API error:', errText);
+      return res.status(400).json({ success: false, message: errText });
+    }
+
+  } catch (err) {
+    console.error('[Payment] Request failed:', err.message);
+    return res.status(502).json({ success: false, message: 'Could not reach payment gateway. Please try again.' });
+  }
 });
 
 module.exports = router;
