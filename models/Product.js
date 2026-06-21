@@ -1,15 +1,22 @@
 const mongoose = require('mongoose');
 
-const ProductSchema = new mongoose.Schema({
-  category: { type: String, required: true, index: true },
-  vertical: { type: String, default: 'HVAC', index: true },
-  name: { type: String, required: true },
-  part: { type: String, required: true },
-  price: { type: Number, required: true },
-  was: { type: Number, default: null },
-  brand: { type: String, default: 'Gemaire' },
-  img: { type: String, default: null },
+const productSchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true },
+  part: { type: String, default: '', trim: true },       // Part number
+  category: { type: String, required: true, trim: true },
+  brand: { type: String, default: '', trim: true },
+  vertical: { type: String, default: '', trim: true },       // Department / vertical
+  price: { type: String, default: '' },                   // Sale price e.g. "$109.95"
+  was: { type: String, default: '' },                   // List/original price
+  img: { type: String, default: '' },                   // Image URL or base64
   inStock: { type: Boolean, default: true },
-}, { timestamps: true });
+  featured: { type: Boolean, default: false },
+  status: { type: String, enum: ['active', 'inactive'], default: 'active' },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
 
-module.exports = mongoose.model('Product', ProductSchema);
+// Text index for search
+productSchema.index({ name: 'text', part: 'text', brand: 'text', category: 'text' });
+
+module.exports = mongoose.model('Product', productSchema);
