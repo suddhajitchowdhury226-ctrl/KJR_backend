@@ -53,11 +53,22 @@ const invoiceSchema = new mongoose.Schema({
   shipping: { type: Number, default: 0 },
   total: { type: Number, required: true },
 
+  // Admin approval fields
+  approvalStatus: {
+    type: String,
+    enum: ['pending_approval', 'approved', 'rejected'],
+    default: 'pending_approval'
+  },
+  approvedAt: { type: Date, default: null },
+  approvedBy: { type: String, default: '' },
+  rejectedAt: { type: Date, default: null },
+  rejectionReason: { type: String, default: '' },
+
   // Order / tracking
   orderStatus: {
     type: String,
-    enum: ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered', 'cancelled'],
-    default: 'confirmed'
+    enum: ['pending_approval', 'confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered', 'cancelled'],
+    default: 'pending_approval'
   },
   trackingNumber: { type: String, default: '' },
   trackingCarrier: { type: String, default: '' },   // UPS, FedEx, USPS, etc.

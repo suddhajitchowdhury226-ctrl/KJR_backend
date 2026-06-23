@@ -223,12 +223,13 @@ router.post('/charge', async (req, res) => {
                 shipping: 0,
                 total,
                 status: 'paid',
-                orderStatus: 'confirmed',
-                estimatedDelivery: estDelivery,
+                orderStatus: 'pending_approval',
+                approvalStatus: 'pending_approval',
+                estimatedDelivery: null,
                 // Seed the first tracking event
                 trackingEvents: [{
-                  status: 'Order Confirmed',
-                  description: `Payment of $${total.toFixed(2)} received. Order #${finalInvoiceNumber} is confirmed and being prepared.`,
+                  status: 'Order Received — Pending Review',
+                  description: `Payment of $${total.toFixed(2)} received. Order #${finalInvoiceNumber} is awaiting admin review before processing.`,
                   location: 'Lawrenceville, GA',
                   timestamp: new Date()
                 }]
@@ -538,6 +539,178 @@ router.put('/order/:invoiceNumber', auth, async (req, res) => {
     res.json({ success: true, orderStatus: inv.orderStatus, trackingEvents: inv.trackingEvents });
   } catch (err) {
     console.error('[Order] Update error:', err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/payment/pending   (admin — all orders awaiting approval)
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/pending', auth, async (req, res) => {
+  try {
+    const orders = await Invoice.find({ approvalStatus: 'pending_approval' })
+      .sort({ createdAt: -1 });
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PUT /api/payment/order/:invoiceNumber/approve   (admin — approve + set delivery date)
+// Body: { estimatedDelivery: "2025-07-10", adminNote: "Ready to ship" }
+// ─────────────────────────────────────────────────────────────────────────────
+router.put('/order/:invoiceNumber/approve', auth, async (req, res) => {
+  try {
+    const inv = await Invoice.findOne({ invoiceNumber: req.params.invoiceNumber });
+    if (!inv) return res.status(404).json({ error: 'Order not found' });
+
+    const { estimatedDelivery, adminNote } = req.body;
+    if (!estimatedDelivery) {
+      return res.status(400).json({ error: 'Estimated delivery date is required.' });
+    }
+
+    inv.approvalStatus = 'approved';
+    inv.approvedAt = new Date();
+    inv.orderStatus = 'confirmed';
+    inv.estimatedDelivery = new Date(estimatedDelivery);
+    inv.updatedAt = new Date();
+
+    inv.trackingEvents.push({
+      status: 'Order Approved',
+      description: adminNote
+        ? `Order approved by admin. Note: ${adminNote}`
+        : `Order approved and confirmed. Estimated delivery: ${new Date(estimatedDelivery).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}.`,
+      location: 'Lawrenceville, GA',
+      timestamp: new Date()
+    });
+
+    await inv.save();
+
+    // Send approval email to customer
+    try {
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.SMTP_PORT) || 587,
+        secure: false,
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+      });
+
+      const etaStr = new Date(estimatedDelivery).toLocaleDateString('en-US', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      });
+
+      await transporter.sendMail({
+        from: `"KJR Interior Designs" <${process.env.SMTP_USER}>`,
+        to: inv.email,
+        subject: `Great news! Your Order #${inv.invoiceNumber} is Confirmed`,
+        html: `
+<div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:600px;margin:2rem auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.1);">
+  <div style="background:#0f172a;padding:2rem;text-align:center;">
+    <div style="color:#cc0000;font-size:.65rem;font-weight:800;letter-spacing:.2em;text-transform:uppercase;margin-bottom:.5rem;">Order Confirmed</div>
+    <div style="color:#fff;font-size:1.4rem;font-weight:800;">Your order is on its way!</div>
+    <div style="color:rgba(255,255,255,.6);font-size:.85rem;margin-top:.3rem;">KJIR Interior Designs Inc.</div>
+  </div>
+  <div style="padding:2rem;">
+    <p style="font-size:1rem;color:#0f172a;margin-bottom:1.25rem;">Hi ${inv.firstName},</p>
+    <p style="color:#475569;margin-bottom:1.5rem;">We're happy to let you know that your order <strong style="color:#0f172a;">#${inv.invoiceNumber}</strong> has been <strong style="color:#16a34a;">approved and confirmed</strong>. We're now preparing it for shipment.</p>
+    <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:1.25rem;margin-bottom:1.5rem;text-align:center;">
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#16a34a;margin-bottom:.4rem;">Estimated Delivery</div>
+      <div style="font-size:1.25rem;font-weight:800;color:#0f172a;">📅 ${etaStr}</div>
+    </div>
+    ${adminNote ? `<div style="background:#fffbeb;border-left:4px solid #d97706;padding:.85rem 1rem;border-radius:4px;margin-bottom:1.25rem;font-size:.88rem;color:#475569;"><strong>Note from our team:</strong> ${adminNote}</div>` : ''}
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-top:1.5rem;">
+      <a href="https://kjr.vercel.app/order-tracking.html?id=${inv.invoiceNumber}" style="flex:1;background:#cc0000;color:#fff;padding:.85rem;border-radius:8px;font-size:.9rem;font-weight:700;text-decoration:none;text-align:center;display:block;">📦 Track Your Order</a>
+      <a href="https://kjr.vercel.app/invoice.html?id=${inv.invoiceNumber}" style="flex:1;background:#0f172a;color:#fff;padding:.85rem;border-radius:8px;font-size:.9rem;font-weight:700;text-decoration:none;text-align:center;display:block;">🧾 View Invoice</a>
+    </div>
+  </div>
+  <div style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:1rem 2rem;text-align:center;">
+    <p style="color:#94a3b8;font-size:.75rem;margin:0;">Questions? Call <strong>888-944-6313</strong> (24/7) or email <a href="mailto:info@kjrid.com" style="color:#cc0000;">info@kjrid.com</a></p>
+  </div>
+</div>`
+      });
+      console.log(`[Approve] Confirmation email sent to: ${inv.email}`);
+    } catch (emailErr) {
+      console.error('[Approve] Email failed:', emailErr.message);
+    }
+
+    res.json({
+      success: true,
+      orderStatus: inv.orderStatus,
+      approvalStatus: inv.approvalStatus,
+      estimatedDelivery: inv.estimatedDelivery,
+      trackingEvents: inv.trackingEvents
+    });
+  } catch (err) {
+    console.error('[Approve] Error:', err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PUT /api/payment/order/:invoiceNumber/reject   (admin — reject order)
+// Body: { reason: "Item out of stock" }
+// ─────────────────────────────────────────────────────────────────────────────
+router.put('/order/:invoiceNumber/reject', auth, async (req, res) => {
+  try {
+    const inv = await Invoice.findOne({ invoiceNumber: req.params.invoiceNumber });
+    if (!inv) return res.status(404).json({ error: 'Order not found' });
+
+    const { reason } = req.body;
+
+    inv.approvalStatus = 'rejected';
+    inv.rejectedAt = new Date();
+    inv.rejectionReason = reason || 'Order could not be fulfilled.';
+    inv.orderStatus = 'cancelled';
+    inv.updatedAt = new Date();
+
+    inv.trackingEvents.push({
+      status: 'Order Cancelled',
+      description: reason ? `Order cancelled by admin. Reason: ${reason}` : 'Order cancelled by admin.',
+      location: 'Lawrenceville, GA',
+      timestamp: new Date()
+    });
+
+    await inv.save();
+
+    // Send rejection/refund email to customer
+    try {
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.SMTP_PORT) || 587,
+        secure: false,
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+      });
+
+      await transporter.sendMail({
+        from: `"KJR Interior Designs" <${process.env.SMTP_USER}>`,
+        to: inv.email,
+        subject: `Important Update About Your Order #${inv.invoiceNumber}`,
+        html: `
+<div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:600px;margin:2rem auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.1);">
+  <div style="background:#0f172a;padding:2rem;text-align:center;">
+    <div style="color:#cc0000;font-weight:800;font-size:.65rem;letter-spacing:.2em;text-transform:uppercase;margin-bottom:.5rem;">Order Update</div>
+    <div style="color:#fff;font-size:1.3rem;font-weight:800;">Regarding Order #${inv.invoiceNumber}</div>
+  </div>
+  <div style="padding:2rem;">
+    <p style="font-size:1rem;color:#0f172a;margin-bottom:1rem;">Hi ${inv.firstName},</p>
+    <p style="color:#475569;margin-bottom:1rem;">We regret to inform you that we were unable to fulfill your order <strong>#${inv.invoiceNumber}</strong>.</p>
+    ${reason ? `<div style="background:#fff5f5;border-left:4px solid #cc0000;padding:.85rem 1rem;border-radius:4px;margin-bottom:1.25rem;font-size:.88rem;color:#475569;"><strong>Reason:</strong> ${reason}</div>` : ''}
+    <p style="color:#475569;margin-bottom:1.5rem;">A full refund of <strong>$${inv.total.toFixed(2)}</strong> will be processed to your original payment method within 3-5 business days.</p>
+    <p style="color:#475569;">Please contact us if you have any questions or if you'd like help finding an alternative.</p>
+    <div style="margin-top:1.5rem;text-align:center;">
+      <a href="tel:888-944-6313" style="background:#cc0000;color:#fff;padding:.85rem 2rem;border-radius:8px;font-size:.9rem;font-weight:700;text-decoration:none;display:inline-block;">📞 Call 888-944-6313</a>
+    </div>
+  </div>
+</div>`
+      });
+    } catch (emailErr) {
+      console.error('[Reject] Email failed:', emailErr.message);
+    }
+
+    res.json({ success: true, orderStatus: 'cancelled', approvalStatus: 'rejected' });
+  } catch (err) {
+    console.error('[Reject] Error:', err.message);
     res.status(500).json({ error: 'Server error' });
   }
 });

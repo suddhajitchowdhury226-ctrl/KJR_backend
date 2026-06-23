@@ -7,8 +7,9 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const apiRoutes = require('./routes/api');
-const chatRoutes    = require('./routes/chat');
+const chatRoutes = require('./routes/chat');
 const paymentRoutes = require('./routes/payment');
+const bunjiRoutes = require('./routes/bunji');
 
 const app = express();
 
@@ -57,7 +58,7 @@ async function connectDB() {
       console.warn('⚠️  Atlas connection failed:', err.message);
       console.warn('⚡ Falling back to in-memory MongoDB for local development...');
       // Disconnect any partial connection
-      try { await mongoose.disconnect(); } catch {}
+      try { await mongoose.disconnect(); } catch { }
     }
   }
 
@@ -79,6 +80,7 @@ connectDB();
 app.use('/api', apiRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api', bunjiRoutes);   // bunji product endpoints: /api/products/...
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -91,5 +93,5 @@ app.get('/health', (req, res) => {
 
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
-  console.log(`🚀 KJR Backend running on http://localhost:${PORT} [2026-06-10 00:25]`);
+  console.log(`🚀 KJR Backend running on http://localhost:${PORT}`);
 });

@@ -401,6 +401,157 @@ router.get('/admin/users', auth, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// USER PROFILE & SETTINGS ROUTES (user-auth via JWT bearer token)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Middleware: verify user JWT (not admin — user payload has req.user)
+function userAuth(req, res, next) {
+  const token = req.header('x-auth-token') || (req.header('Authorization') || '').replace('Bearer ', '');
+  if (!token) return res.status(401).json({ msg: 'No token, authorization denied' });
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.user) { req.userId = decoded.user.id; return next(); }
+    if (decoded.admin) { return res.status(403).json({ msg: 'Admin token cannot access user routes' }); }
+    res.status(401).json({ msg: 'Invalid token structure' });
+  } catch (err) {
+    res.status(401).json({ msg: 'Token is not valid' });
+  }
+}
+
+// @route   GET api/auth/me
+// @desc    Get current user's full profile
+router.get('/auth/me', userAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('-password');
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+    res.json(user);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+
+// @route   PUT api/auth/me
+// @desc    Update current user's profile info
+router.put('/auth/me', userAuth, async (req, res) => {
+  const allowed = ['firstName', 'lastName', 'phone', 'companyName', 'instructorName',
+    'notifOrderUpdates', 'notifPromotions', 'notifBidAlerts', 'notifSmsUpdates',
+    'notifInvoiceReady', 'twoFactorEnabled', 'avatar'];
+  const updates = {};
+  allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
+  updates.updatedAt = new Date();
+  try {
+    const user = await User.findByIdAndUpdate(req.userId, { $set: updates }, { new: true }).select('-password');
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+    res.json(user);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+
+// @route   PUT api/auth/password
+// @desc    Change current user's password
+router.put('/auth/password', userAuth, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ errors: [{ msg: 'Both current and new passwords are required.' }] });
+  }
+  if (newPassword.length < 8) {
+    return res.status(400).json({ errors: [{ msg: 'New password must be at least 8 characters.' }] });
+  }
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) return res.status(400).json({ errors: [{ msg: 'Current password is incorrect.' }] });
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    user.updatedAt = new Date();
+    await user.save();
+    res.json({ success: true, msg: 'Password updated successfully.' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+
+// @route   GET api/auth/addresses
+// @desc    Get user's saved addresses
+router.get('/auth/addresses', userAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('addresses');
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+    res.json(user.addresses || []);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+
+// @route   POST api/auth/addresses
+// @desc    Add a new address
+router.post('/auth/addresses', userAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+    const newAddr = req.body;
+    // If first address or marked default, clear other defaults
+    if (newAddr.isDefault || user.addresses.length === 0) {
+      newAddr.isDefault = true;
+      user.addresses.forEach(a => a.isDefault = false);
+    }
+    user.addresses.push(newAddr);
+    user.updatedAt = new Date();
+    await user.save();
+    res.json(user.addresses);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+
+// @route   PUT api/auth/addresses/:addrId
+// @desc    Update an address
+router.put('/auth/addresses/:addrId', userAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+    const addr = user.addresses.id(req.params.addrId);
+    if (!addr) return res.status(404).json({ msg: 'Address not found' });
+    // If setting as default, clear others
+    if (req.body.isDefault) user.addresses.forEach(a => a.isDefault = false);
+    Object.assign(addr, req.body);
+    user.updatedAt = new Date();
+    await user.save();
+    res.json(user.addresses);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+
+// @route   DELETE api/auth/addresses/:addrId
+// @desc    Delete an address
+router.delete('/auth/addresses/:addrId', userAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+    user.addresses = user.addresses.filter(a => a._id.toString() !== req.params.addrId);
+    // If deleted was default, make first remaining the default
+    if (user.addresses.length > 0 && !user.addresses.some(a => a.isDefault)) {
+      user.addresses[0].isDefault = true;
+    }
+    user.updatedAt = new Date();
+    await user.save();
+    res.json(user.addresses);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // PRODUCT MANAGEMENT ROUTES
 // ─────────────────────────────────────────────────────────────────────────────
 
