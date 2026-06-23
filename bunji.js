@@ -260,6 +260,12 @@
 
   };
 
+  // Expose product data globally for the products.html page
+  // Only set if not already provided by products-data.js
+  if (!window.KJR_CATEGORY_PRODUCTS) {
+    window.KJR_CATEGORY_PRODUCTS = CATEGORY_PRODUCTS;
+  }
+
   const PRODUCT_CATEGORIES = [
     "Accumulators & Receivers", "Adhesives", "Air Cleaners", "Air Filters",
     "Airflow Accessories", "Blower Components", "Brazing & Soldering Supplies",
@@ -545,6 +551,28 @@
     </div>
   `;
   document.body.appendChild(widget);
+
+  // ─── GLOBAL LOGIN GATE ────────────────────────────────────────────────────
+  // Chat widget is hidden on ALL pages until the user is logged in
+  const widgetEl = document.getElementById('bunji-widget');
+  const isLoggedIn = !!localStorage.getItem('kjr_user');
+
+  if (!isLoggedIn) {
+    // Keep widget completely hidden
+    if (widgetEl) widgetEl.style.display = 'none';
+
+    // Reveal immediately when user logs in on this page
+    window.addEventListener('kjr-login', () => {
+      if (widgetEl) widgetEl.style.display = '';
+    });
+
+    // Reveal if login detected in another tab
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'kjr_user' && e.newValue) {
+        if (widgetEl) widgetEl.style.display = '';
+      }
+    });
+  }
 
   // ─── REFS ─────────────────────────────────────────────────────────────────
   const toggleBtn = document.getElementById('bunji-toggle');
@@ -1073,6 +1101,665 @@
     await loadPage(1);
   }
 
+  // ─── PART SEARCH ─────────────────────────────────────────────────────────
+  // State: are we waiting for a search query after pressing #5?
+  let awaitingPartSearch = false;
+
+  function renderPartSearchPrompt() {
+    awaitingPartSearch = true;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'bunji-cat-wrapper';
+
+    const title = document.createElement('div');
+    title.className = 'bunji-cat-title';
+    title.textContent = '🔍 Search by Part Number or Product Name';
+    wrapper.appendChild(title);
+
+    const sub = document.createElement('div');
+    sub.style.cssText = 'font-size:11px;color:#64748b;margin-bottom:10px;';
+    sub.textContent = 'Type a part number (e.g. VA-35-5S) or product name in the chat box below and press Send.';
+    wrapper.appendChild(sub);
+
+    // Quick example buttons
+    const exRow = document.createElement('div');
+    exRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:5px;';
+    ['VA-35-5S', 'Air Filter 20x25', 'Capacitor', 'GDS16201'].forEach(ex => {
+      const btn = document.createElement('button');
+      btn.className = 'bunji-cat-btn';
+      btn.textContent = ex;
+      btn.style.cssText = 'font-size:10.5px;padding:4px 8px;';
+      btn.addEventListener('click', () => {
+        awaitingPartSearch = false;
+        addBubble(ex, 'user');
+        doPartSearch(ex);
+      });
+      exRow.appendChild(btn);
+    });
+    wrapper.appendChild(exRow);
+
+    messagesEl.appendChild(wrapper);
+    scrollBottom();
+    inputEl.focus();
+  }
+
+  // ── Build a flat, scored product list from the full static catalog ──────────
+  function buildFlatCatalog() {
+    // Prefer products-data.js (full catalog), fall back to bunji's own CATEGORY_PRODUCTS
+    const src = window.KJR_CATEGORY_PRODUCTS || CATEGORY_PRODUCTS;
+    const flat = [];
+    Object.entries(src).forEach(([cat, items]) => {
+      (items || []).forEach(p => {
+        if (p && p.name) flat.push({ ...p, category: cat });
+      });
+    });
+    return flat;
+  }
+
+  // Score a product against a query — higher = better match
+  function scoreProduct(p, tokens, rawQuery) {
+    const nameLower = (p.name || '').toLowerCase();
+    const partLower = (p.part || '').toLowerCase();
+    const catLower = (p.category || '').toLowerCase();
+
+    // Remove spaces/dashes for dimension matching: "20x25" matches "20X25"
+    const nameNorm = nameLower.replace(/[\s\-_]/g, '');
+    const partNorm = partLower.replace(/[\s\-_]/g, '');
+    const qNorm = rawQuery.replace(/[\s\-_]/g, '').toLowerCase();
+
+    let score = 0;
+
+    // Exact part number match — top priority
+    if (partLower === rawQuery) score += 1000;
+    if (partNorm === qNorm) score += 800;
+    if (partLower.includes(rawQuery)) score += 500;
+    if (partNorm.includes(qNorm)) score += 400;
+
+    // Exact name match
+    if (nameLower === rawQuery) score += 600;
+    if (nameNorm === qNorm) score += 500;
+    if (nameLower.includes(rawQuery)) score += 300;
+    if (nameNorm.includes(qNorm)) score += 250;
+
+    // Token-based: score each search word separately
+    tokens.forEach(tok => {
+      const tokNorm = tok.replace(/[\s\-_]/g, '');
+      if (partLower.includes(tok)) score += 120;
+      if (partNorm.includes(tokNorm)) score += 100;
+      if (nameLower.includes(tok)) score += 80;
+      if (nameNorm.includes(tokNorm)) score += 60;
+      if (catLower.includes(tok)) score += 20;
+    });
+
+    return score;
+  }
+
+  // Search products locally + via API, then render up to 4 result cards + modal
+  async function doPartSearch(query) {
+    const q = query.trim();
+    if (!q) return;
+
+    showTyping();
+
+    // ── 1. Smart local search across the FULL catalog ────────────────────────
+    const rawQ = q.toLowerCase();
+    // Split query into meaningful tokens (ignore short noise words)
+    const tokens = rawQ.split(/[\s,]+/).filter(t => t.length >= 2);
+
+    const catalog = buildFlatCatalog();
+
+    // Score every product
+    const scored = catalog
+      .map(p => ({ p, score: scoreProduct(p, tokens, rawQ) }))
+      .filter(x => x.score > 0)
+      .sort((a, b) => b.score - a.score);
+
+    const localResults = scored.map(x => x.p);
+
+    // ── 2. Also hit backend search API (best-effort, non-blocking) ───────────
+    const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:5001/api'
+      : 'https://kjr-backend.onrender.com/api';
+
+    let apiResults = [];
+    try {
+      const res = await fetch(`${API_BASE}/products/search?q=${encodeURIComponent(q)}&limit=8`, {
+        signal: AbortSignal.timeout(6000)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        apiResults = data.products || [];
+      }
+    } catch (e) { /* backend unavailable — local results are sufficient */ }
+
+    hideTyping();
+
+    // ── 3. Merge: API first (DB data), then local — dedupe by part# or name ──
+    const seen = new Set();
+    const merged = [];
+    [...apiResults, ...localResults].forEach(p => {
+      const key = ((p.part && p.part.trim()) ? p.part.trim() : p.name).toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        merged.push(p);
+      }
+    });
+
+    if (merged.length === 0) {
+      addBubble(
+        `😔 We couldn't find "${q}" in our catalog right now.\n\n` +
+        `No worries — our executive team will contact you shortly!\n` +
+        `Please leave your details below and we'll source this part for you. 👇`,
+        'bunji'
+      );
+      renderInquiryForm(q);
+      return;
+    }
+
+    const show = merged.slice(0, 4);
+    addBubble(
+      `✅ Found ${merged.length} result${merged.length !== 1 ? 's' : ''} for "${q}" — showing top ${show.length}.\n` +
+      `Click "View Details" on any card to see full pricing, specs, and order options.`,
+      'bunji'
+    );
+
+    renderPartSearchResults(show, q, merged.length);
+  }
+
+  // ── Inquiry form — shown when no product is found ────────────────────────
+  function renderInquiryForm(prefillQuery) {
+    // Pre-fill name/email from logged-in user if available
+    const kjrUser = (() => { try { return JSON.parse(localStorage.getItem('kjr_user') || 'null'); } catch { return null; } })();
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'bunji-cat-wrapper';
+    wrapper.style.cssText = 'background:#fff3f3;border:1.5px solid #cc0000;border-radius:8px;border-bottom-left-radius:0;padding:14px;';
+
+    wrapper.innerHTML = `
+      <div style="font-size:12.5px;font-weight:700;color:#cc0000;margin-bottom:10px;">📋 Request This Part — We'll Find It For You</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div>
+          <label style="font-size:10px;font-weight:700;color:#64748b;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;">Your Name *</label>
+          <input id="inq-name" type="text" placeholder="Full name"
+            value="${kjrUser ? (kjrUser.username || '') : ''}"
+            style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:12.5px;font-family:'Inter',Arial,sans-serif;box-sizing:border-box;outline:none;">
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:#64748b;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;">Email Address *</label>
+          <input id="inq-email" type="email" placeholder="you@example.com"
+            value="${kjrUser ? (kjrUser.email || '') : ''}"
+            style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:12.5px;font-family:'Inter',Arial,sans-serif;box-sizing:border-box;outline:none;">
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:#64748b;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;">Phone Number</label>
+          <input id="inq-phone" type="tel" placeholder="555-123-4567"
+            style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:12.5px;font-family:'Inter',Arial,sans-serif;box-sizing:border-box;outline:none;">
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:#64748b;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;">Part / Product You Need *</label>
+          <input id="inq-query" type="text" placeholder="Part number or description"
+            value="${(prefillQuery || '').replace(/"/g, '&quot;')}"
+            style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:12.5px;font-family:'Inter',Arial,sans-serif;box-sizing:border-box;outline:none;">
+        </div>
+        <div id="inq-error" style="display:none;color:#cc0000;font-size:11px;font-weight:600;padding:5px 8px;background:#fff1f1;border-radius:5px;"></div>
+        <button id="inq-submit-btn"
+          style="background:#cc0000;color:#fff;border:none;border-radius:7px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:'Inter',Arial,sans-serif;transition:background .15s;margin-top:2px;">
+          📨 Submit — Our Team Will Contact You
+        </button>
+        <div style="font-size:10px;color:#94a3b8;text-align:center;">Or call us anytime: <strong>888-944-6313</strong> (24/7)</div>
+      </div>
+    `;
+
+    messagesEl.appendChild(wrapper);
+    scrollBottom();
+
+    // Focus first empty required field
+    const nameInput = wrapper.querySelector('#inq-name');
+    const emailInput = wrapper.querySelector('#inq-email');
+    const phoneInput = wrapper.querySelector('#inq-phone');
+    const queryInput = wrapper.querySelector('#inq-query');
+    const errEl = wrapper.querySelector('#inq-error');
+    const submitBtn = wrapper.querySelector('#inq-submit-btn');
+
+    // Focus on first empty
+    if (!nameInput.value) nameInput.focus();
+    else if (!emailInput.value) emailInput.focus();
+
+    // Hover style
+    submitBtn.addEventListener('mouseenter', () => { submitBtn.style.background = '#aa0000'; });
+    submitBtn.addEventListener('mouseleave', () => { submitBtn.style.background = '#cc0000'; });
+
+    // Submit
+    submitBtn.addEventListener('click', async () => {
+      const name = nameInput.value.trim();
+      const email = emailInput.value.trim();
+      const phone = phoneInput.value.trim();
+      const query = queryInput.value.trim();
+
+      // Validate
+      errEl.style.display = 'none';
+      if (!name) { errEl.textContent = 'Please enter your name.'; errEl.style.display = 'block'; nameInput.focus(); return; }
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        errEl.textContent = 'Please enter a valid email address.'; errEl.style.display = 'block'; emailInput.focus(); return;
+      }
+      if (!query) { errEl.textContent = 'Please describe the part you need.'; errEl.style.display = 'block'; queryInput.focus(); return; }
+
+      // Disable while submitting
+      submitBtn.textContent = 'Sending…';
+      submitBtn.disabled = true;
+
+      const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:5001/api'
+        : 'https://kjr-backend.onrender.com/api';
+
+      try {
+        const res = await fetch(`${API_BASE}/inquiries`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query, name, email, phone }),
+          signal: AbortSignal.timeout(15000)
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          // Replace form with success message
+          wrapper.innerHTML = `
+            <div style="text-align:center;padding:8px 0;">
+              <div style="font-size:28px;margin-bottom:8px;">✅</div>
+              <div style="font-weight:700;color:#15803d;font-size:13px;margin-bottom:6px;">Request Submitted!</div>
+              <div style="font-size:12px;color:#475569;line-height:1.5;">
+                Thank you, <strong>${name}</strong>! One of our executives will<br>
+                contact you at <strong>${email}</strong> soon.<br><br>
+                In the meantime, you can call us 24/7 at<br>
+                <strong style="color:#cc0000;">888-944-6313</strong>
+              </div>
+            </div>`;
+          wrapper.style.background = '#f0fdf4';
+          wrapper.style.border = '1.5px solid #16a34a';
+          scrollBottom();
+          addBubble(
+            `✅ Got it! Your request for "${query}" has been submitted.\n\n` +
+            `Our executive team will reach out to ${email} shortly.\n\n` +
+            `You can also call us anytime at 888-944-6313 (24/7).\n\n` +
+            `Would you like to search for another part?`,
+            'bunji'
+          );
+          // Show search again button
+          setTimeout(() => renderPartSearchPrompt(), 400);
+        } else {
+          throw new Error(data.error || 'Submission failed');
+        }
+      } catch (err) {
+        // If backend is down, still show success (log to console) and give phone fallback
+        console.warn('Inquiry submit error:', err.message);
+        wrapper.innerHTML = `
+          <div style="text-align:center;padding:8px 0;">
+            <div style="font-size:26px;margin-bottom:8px;">📞</div>
+            <div style="font-weight:700;color:#cc0000;font-size:13px;margin-bottom:6px;">Call Us Directly</div>
+            <div style="font-size:12px;color:#475569;line-height:1.6;">
+              Our system is temporarily offline.<br>
+              Please call us at <strong style="color:#cc0000;">888-944-6313</strong><br>
+              (24/7 Live Operator) and ask for the part:<br>
+              <strong>"${query}"</strong>
+            </div>
+          </div>`;
+        scrollBottom();
+      }
+    });
+
+    // Allow Enter key on last field to submit
+    queryInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitBtn.click(); });
+  }
+
+  // ── Render up to 4 search result cards ────────────────────────────────────
+  function renderPartSearchResults(products, query, totalFound) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'bunji-prod-wrapper';
+
+    const title = document.createElement('div');
+    title.className = 'bunji-prod-title';
+    title.textContent = `🔍 Results for "${query}"`;
+    wrapper.appendChild(title);
+
+    const sub = document.createElement('div');
+    sub.className = 'bunji-prod-sub';
+    sub.textContent = `${totalFound} match${totalFound !== 1 ? 'es' : ''} found · Showing top ${products.length}`;
+    wrapper.appendChild(sub);
+
+    const list = document.createElement('div');
+    list.className = 'bunji-prod-list';
+
+    products.forEach(p => {
+      const card = buildSearchResultCard(p);
+      list.appendChild(card);
+    });
+
+    wrapper.appendChild(list);
+
+    // "Search again" link
+    const again = document.createElement('button');
+    again.style.cssText = 'margin-top:10px;width:100%;padding:7px;background:#fff;border:1.5px solid #cc0000;color:#cc0000;border-radius:7px;font-size:11.5px;font-weight:700;cursor:pointer;';
+    again.textContent = '🔍 Search Again';
+    again.addEventListener('click', () => {
+      addBubble('Search again', 'user');
+      renderPartSearchPrompt();
+    });
+    wrapper.appendChild(again);
+
+    messagesEl.appendChild(wrapper);
+    scrollBottom();
+  }
+
+  // ── Build a compact search result card with "View Details" popup ──────────
+  function buildSearchResultCard(p) {
+    const PLACEHOLDER_SVG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect width='80' height='80' fill='%23f0f0f0' rx='6'/%3E%3Ctext x='40' y='44' font-family='Arial' font-size='10' fill='%23bbb' text-anchor='middle'%3ENo Image%3C/text%3E%3C/svg%3E`;
+
+    const card = document.createElement('div');
+    card.className = 'bunji-prod-card';
+    card.style.cursor = 'pointer';
+
+    // Image
+    const img = document.createElement('img');
+    img.className = 'bunji-prod-img';
+    img.alt = p.name;
+    img.src = p.img || PLACEHOLDER_SVG;
+    img.onerror = () => { img.src = PLACEHOLDER_SVG; };
+    card.appendChild(img);
+
+    // Body
+    const body = document.createElement('div');
+    body.className = 'bunji-prod-body';
+
+    const catTag = document.createElement('div');
+    catTag.style.cssText = 'font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#cc0000;margin-bottom:2px;';
+    catTag.textContent = p.category || '';
+
+    const name = document.createElement('div');
+    name.className = 'bunji-prod-name';
+    name.textContent = p.name;
+
+    const part = document.createElement('div');
+    part.className = 'bunji-prod-part';
+    part.textContent = `Part #: ${p.part || 'N/A'}`;
+
+    const pricing = document.createElement('div');
+    pricing.className = 'bunji-prod-pricing';
+
+    const priceEl = document.createElement('span');
+    priceEl.className = 'bunji-prod-price';
+    priceEl.textContent = p.price || 'Call';
+    pricing.appendChild(priceEl);
+
+    if (p.was) {
+      const wasEl = document.createElement('span');
+      wasEl.className = 'bunji-prod-was';
+      wasEl.textContent = `was ${p.was}`;
+      pricing.appendChild(wasEl);
+    }
+
+    // View Details button — opens inline modal
+    const viewBtn = document.createElement('button');
+    viewBtn.className = 'bunji-buy-btn';
+    viewBtn.style.cssText = 'background:#0f172a;margin-top:5px;align-self:flex-start;padding:5px 12px;font-size:11px;border:none;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;';
+    viewBtn.textContent = '🔍 View Details';
+    viewBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openBunjiProductModal(p);
+    });
+
+    body.appendChild(catTag);
+    body.appendChild(name);
+    body.appendChild(part);
+    body.appendChild(pricing);
+    body.appendChild(viewBtn);
+    card.appendChild(body);
+
+    // Clicking anywhere on card also opens modal
+    card.addEventListener('click', () => openBunjiProductModal(p));
+
+    return card;
+  }
+
+  // ── Inline product detail modal (mirrors products.html modal) ─────────────
+  function openBunjiProductModal(p) {
+    // Remove any existing modal
+    const existing = document.getElementById('bunji-prod-modal');
+    if (existing) existing.remove();
+
+    const parsePrice = str => str ? parseFloat(str.replace(/[^0-9.]/g, '')) || 0 : 0;
+    const discount = p.was && p.price
+      ? Math.round((1 - parsePrice(p.price) / parsePrice(p.was)) * 100)
+      : 0;
+
+    let qty = 1;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'bunji-prod-modal';
+    overlay.style.cssText = `
+      position:fixed;inset:0;z-index:99999;
+      display:flex;align-items:center;justify-content:center;
+      background:rgba(0,0,0,.65);backdrop-filter:blur(4px);
+    `;
+
+    const box = document.createElement('div');
+    box.style.cssText = `
+      position:relative;background:#fff;border-radius:18px;
+      width:min(95vw,760px);max-height:92vh;overflow-y:auto;
+      box-shadow:0 24px 80px rgba(0,0,0,.35);
+      animation:bunjiModalIn .22s ease;font-family:'Inter',Arial,sans-serif;
+    `;
+
+    // Inject animation keyframes once
+    if (!document.getElementById('bunji-modal-style')) {
+      const st = document.createElement('style');
+      st.id = 'bunji-modal-style';
+      st.textContent = `
+        @keyframes bunjiModalIn {
+          from { opacity:0; transform:translateY(24px) scale(.97); }
+          to   { opacity:1; transform:translateY(0) scale(1); }
+        }
+        #bunji-prod-modal .bm-close {
+          position:absolute;top:12px;right:12px;
+          width:34px;height:34px;border-radius:50%;
+          border:1.5px solid #e2e8f0;background:#fff;
+          font-size:14px;cursor:pointer;z-index:10;
+          display:flex;align-items:center;justify-content:center;
+          transition:background .15s;
+        }
+        #bunji-prod-modal .bm-close:hover { background:#fee2e2;border-color:#cc0000; }
+        #bunji-prod-modal .bm-inner {
+          display:grid;grid-template-columns:1fr 1fr;min-height:420px;
+        }
+        @media(max-width:560px){
+          #bunji-prod-modal .bm-inner { grid-template-columns:1fr; }
+          #bunji-prod-modal .bm-img-side {
+            border-right:none!important;border-bottom:1px solid #e2e8f0;
+            border-radius:18px 18px 0 0!important;min-height:160px!important;
+          }
+        }
+        #bunji-prod-modal .bm-img-side {
+          background:#f8fafc;border-right:1px solid #e2e8f0;
+          border-radius:18px 0 0 18px;
+          display:flex;align-items:center;justify-content:center;
+          padding:1.5rem;min-height:300px;position:relative;
+        }
+        #bunji-prod-modal .bm-main-img {
+          width:100%;max-height:260px;object-fit:contain;border-radius:10px;
+        }
+        #bunji-prod-modal .bm-badge {
+          position:absolute;top:10px;left:10px;
+          background:#cc0000;color:#fff;font-size:.68rem;font-weight:800;
+          padding:.2rem .55rem;border-radius:20px;letter-spacing:.05em;
+        }
+        #bunji-prod-modal .bm-detail {
+          padding:1.5rem;display:flex;flex-direction:column;gap:.7rem;
+        }
+        #bunji-prod-modal .bm-cat { font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#cc0000; }
+        #bunji-prod-modal .bm-title { font-size:1.1rem;font-weight:800;color:#0f172a;line-height:1.3;margin:0; }
+        #bunji-prod-modal .bm-part-row { display:flex;align-items:center;gap:.4rem;flex-wrap:wrap; }
+        #bunji-prod-modal .bm-part-label { font-size:.74rem;color:#64748b;font-weight:600; }
+        #bunji-prod-modal .bm-part-val { font-size:.78rem;font-family:'Courier New',monospace;background:#f8fafc;border:1px solid #e2e8f0;padding:.18rem .5rem;border-radius:5px;color:#0f172a;font-weight:700; }
+        #bunji-prod-modal .bm-copy { font-size:.68rem;padding:.18rem .55rem;border:1.5px solid #e2e8f0;border-radius:5px;background:#fff;cursor:pointer;color:#64748b;font-weight:600;transition:all .15s; }
+        #bunji-prod-modal .bm-copy:hover { border-color:#cc0000;color:#cc0000; }
+        #bunji-prod-modal .bm-price-block { display:flex;align-items:center;gap:.6rem;flex-wrap:wrap; }
+        #bunji-prod-modal .bm-price { font-size:1.8rem;font-weight:800;color:#cc0000; }
+        #bunji-prod-modal .bm-was { font-size:.9rem;color:#94a3b8;text-decoration:line-through; }
+        #bunji-prod-modal .bm-save { font-size:.7rem;font-weight:700;background:#dcfce7;color:#16a34a;padding:.18rem .55rem;border-radius:20px; }
+        #bunji-prod-modal .bm-avail { display:flex;align-items:center;gap:.45rem;font-size:.78rem;color:#16a34a;font-weight:600; }
+        #bunji-prod-modal .bm-dot { width:7px;height:7px;background:#16a34a;border-radius:50%;flex-shrink:0; }
+        #bunji-prod-modal .bm-divider { border:none;border-top:1px solid #e2e8f0;margin:.15rem 0; }
+        #bunji-prod-modal .bm-qty-row { display:flex;align-items:center;gap:.8rem; }
+        #bunji-prod-modal .bm-qty-label { font-size:.82rem;font-weight:700;color:#0f172a; }
+        #bunji-prod-modal .bm-qty-ctrl { display:flex;align-items:center;border:1.5px solid #e2e8f0;border-radius:8px;overflow:hidden; }
+        #bunji-prod-modal .bm-qty-ctrl button { width:32px;height:32px;border:none;background:#f8fafc;font-size:1rem;cursor:pointer;color:#0f172a;transition:background .15s; }
+        #bunji-prod-modal .bm-qty-ctrl button:hover { background:#e2e8f0; }
+        #bunji-prod-modal .bm-qty-input { width:46px;text-align:center;border:none;border-left:1.5px solid #e2e8f0;border-right:1.5px solid #e2e8f0;font-size:.86rem;font-weight:700;font-family:'Inter',Arial,sans-serif;outline:none;height:32px; }
+        #bunji-prod-modal .bm-actions { display:flex;gap:.6rem;flex-wrap:wrap; }
+        #bunji-prod-modal .bm-btn-cart { flex:1;padding:.75rem 1rem;background:#0f172a;color:#fff;border:none;border-radius:9px;font-size:.84rem;font-weight:700;cursor:pointer;font-family:'Inter',Arial,sans-serif;transition:background .2s;min-width:120px; }
+        #bunji-prod-modal .bm-btn-cart:hover { background:#1e293b; }
+        #bunji-prod-modal .bm-btn-order { flex:1;padding:.75rem 1rem;background:#cc0000;color:#fff;border:none;border-radius:9px;font-size:.84rem;font-weight:700;cursor:pointer;font-family:'Inter',Arial,sans-serif;transition:background .2s;min-width:120px; }
+        #bunji-prod-modal .bm-btn-order:hover { background:#aa0000; }
+        #bunji-prod-modal .bm-specs { background:#f8fafc;border-radius:10px;padding:.75rem .9rem;display:flex;flex-direction:column;gap:.35rem; }
+        #bunji-prod-modal .bm-spec-row { display:flex;justify-content:space-between;font-size:.76rem;gap:.8rem; }
+        #bunji-prod-modal .bm-spec-row span:first-child { color:#64748b;font-weight:600; }
+        #bunji-prod-modal .bm-spec-row span:last-child { color:#0f172a;font-weight:700;text-align:right; }
+        #bunji-prod-modal .bm-call-bar { background:#0f172a;color:rgba(255,255,255,.85);border-radius:9px;padding:.65rem .9rem;font-size:.78rem;text-align:center; }
+        #bunji-prod-modal .bm-call-bar strong { color:#fff; }
+      `;
+      document.head.appendChild(st);
+    }
+
+    const imgHTML = p.img
+      ? `<img class="bm-main-img" src="${p.img}" alt="${p.name}" onerror="this.style.display='none'">`
+      : `<div style="display:flex;flex-direction:column;align-items:center;gap:.6rem;color:#94a3b8;">
+           <svg viewBox="0 0 24 24" stroke="#94a3b8" fill="none" stroke-width="1.5" width="70" height="70">
+             <rect x="3" y="3" width="18" height="18" rx="2"/>
+             <circle cx="8.5" cy="8.5" r="1.5"/>
+             <polyline points="21 15 16 10 5 21"/>
+           </svg>
+           <span style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;">No Image</span>
+         </div>`;
+
+    box.innerHTML = `
+      <button class="bm-close" id="bm-close-btn">✕</button>
+      <div class="bm-inner">
+        <div class="bm-img-side">
+          ${imgHTML}
+          ${discount > 0 ? `<div class="bm-badge">-${discount}% OFF</div>` : ''}
+        </div>
+        <div class="bm-detail">
+          <div class="bm-cat">${p.category || ''}</div>
+          <h2 class="bm-title">${p.name}</h2>
+          <div class="bm-part-row">
+            <span class="bm-part-label">Part Number:</span>
+            <span class="bm-part-val">${p.part || 'N/A'}</span>
+            <button class="bm-copy" id="bm-copy-btn">Copy</button>
+          </div>
+          <div class="bm-price-block">
+            <span class="bm-price">${p.price || 'Call for Price'}</span>
+            ${p.was ? `<span class="bm-was">${p.was}</span>` : ''}
+            ${discount > 0 ? `<span class="bm-save">Save ${discount}%</span>` : ''}
+          </div>
+          <div class="bm-avail"><span class="bm-dot"></span> In Stock — Call to Confirm</div>
+          <hr class="bm-divider">
+          <div class="bm-qty-row">
+            <span class="bm-qty-label">Qty:</span>
+            <div class="bm-qty-ctrl">
+              <button id="bm-qty-minus">−</button>
+              <input class="bm-qty-input" id="bm-qty-input" type="number" value="1" min="1" max="999">
+              <button id="bm-qty-plus">+</button>
+            </div>
+          </div>
+          <div class="bm-actions">
+            <button class="bm-btn-cart" id="bm-cart-btn">🛒 Add to Cart</button>
+            <button class="bm-btn-order" id="bm-order-btn">⚡ Buy Now</button>
+          </div>
+          <hr class="bm-divider">
+          <div class="bm-specs">
+            <div class="bm-spec-row"><span>Category</span><span>${p.category || '—'}</span></div>
+            <div class="bm-spec-row"><span>Part #</span><span>${p.part || '—'}</span></div>
+            <div class="bm-spec-row"><span>List Price</span><span>${p.was || p.price || '—'}</span></div>
+            <div class="bm-spec-row"><span>Sale Price</span><span>${p.price || '—'}</span></div>
+            <div class="bm-spec-row"><span>Availability</span><span>Call 888-944-6313</span></div>
+            <div class="bm-spec-row"><span>Shipping</span><span>Call for Quote</span></div>
+          </div>
+          <div class="bm-call-bar">📞 <strong>888-944-6313</strong> &nbsp;·&nbsp; 24/7 Live Operator &nbsp;·&nbsp; Call-in Orders Only</div>
+        </div>
+      </div>
+    `;
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    document.body.style.overflow = 'hidden';
+
+    // Close handlers
+    function closeBunjiModal() {
+      overlay.remove();
+      document.body.style.overflow = '';
+    }
+    document.getElementById('bm-close-btn').addEventListener('click', closeBunjiModal);
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeBunjiModal(); });
+    document.addEventListener('keydown', function escHandler(e) {
+      if (e.key === 'Escape') { closeBunjiModal(); document.removeEventListener('keydown', escHandler); }
+    });
+
+    // Qty controls
+    const qtyInput = document.getElementById('bm-qty-input');
+    document.getElementById('bm-qty-minus').addEventListener('click', () => {
+      let v = parseInt(qtyInput.value) - 1;
+      if (v < 1) v = 1;
+      qtyInput.value = v;
+    });
+    document.getElementById('bm-qty-plus').addEventListener('click', () => {
+      let v = parseInt(qtyInput.value) + 1;
+      if (v > 999) v = 999;
+      qtyInput.value = v;
+    });
+
+    // Copy part number
+    document.getElementById('bm-copy-btn').addEventListener('click', () => {
+      if (p.part) {
+        navigator.clipboard.writeText(p.part).then(() => {
+          const btn = document.getElementById('bm-copy-btn');
+          if (btn) { btn.textContent = 'Copied!'; setTimeout(() => { if (btn) btn.textContent = 'Copy'; }, 1500); }
+        });
+      }
+    });
+
+    // Add to Cart
+    document.getElementById('bm-cart-btn').addEventListener('click', () => {
+      const qtyVal = parseInt(qtyInput.value) || 1;
+      let cart = JSON.parse(localStorage.getItem('kjr_cart') || '[]');
+      const existing = cart.find(c => c.part === p.part);
+      if (existing) { existing.qty += qtyVal; } else { cart.push({ name: p.name, part: p.part, price: p.price, qty: qtyVal }); }
+      localStorage.setItem('kjr_cart', JSON.stringify(cart));
+      const btn = document.getElementById('bm-cart-btn');
+      if (btn) {
+        btn.textContent = '✅ Added to Cart!';
+        btn.style.background = '#16a34a';
+        // Also show confirmation in chat
+        addBubble(
+          `🛒 Added to cart: ${p.name} × ${qtyVal}\n` +
+          `Part #: ${p.part || 'N/A'} — ${p.price || 'Call for Price'}\n\n` +
+          `Call 888-944-6313 (24/7) to complete your order!`,
+          'bunji'
+        );
+        setTimeout(closeBunjiModal, 1200);
+      }
+    });
+
+    // Buy Now
+    document.getElementById('bm-order-btn').addEventListener('click', () => {
+      const qtyVal = parseInt(qtyInput.value) || 1;
+      let cart = JSON.parse(localStorage.getItem('kjr_cart') || '[]');
+      const existing = cart.find(c => c.part === p.part);
+      if (existing) { existing.qty += qtyVal; } else { cart.push({ name: p.name, part: p.part, price: p.price, qty: qtyVal }); }
+      localStorage.setItem('kjr_cart', JSON.stringify(cart));
+      closeBunjiModal();
+      window.location.href = 'checkout.html';
+    });
+  }
+
   // ─── BOT COMMUNICATION ────────────────────────────────────────────────────
   async function sendToBot(text) {
     showTyping();
@@ -1080,7 +1767,8 @@
       const resp = await fetch(LOCAL_API, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, message: text })
+        body: JSON.stringify({ sessionId, message: text }),
+        signal: AbortSignal.timeout(30000)   // 30s — allows for Render cold start
       });
       const data = await resp.json();
       hideTyping();
@@ -1088,11 +1776,15 @@
       if (resp.ok && data.reply) {
         addBubble(data.reply, 'bunji');
       } else {
-        addBubble('❌ Sorry, I am having trouble connecting right now.', 'bunji');
+        addBubble('I\'m having trouble connecting. Please call 888-944-6313 (24/7 Live Operator) or try again in a moment.', 'bunji');
       }
     } catch (e) {
       hideTyping();
-      addBubble('❌ Error connecting to server.', 'bunji');
+      if (e.name === 'TimeoutError' || e.name === 'AbortError') {
+        addBubble('The server is waking up — this can take up to 30 seconds on first load. Please send your message again in a moment, or call 888-944-6313 (24/7).', 'bunji');
+      } else {
+        addBubble('I\'m having trouble connecting right now. Please call 888-944-6313 (24/7 Live Operator) for immediate assistance.', 'bunji');
+      }
     }
   }
 
@@ -1102,17 +1794,24 @@
     if (!trimmed) return;
     inputEl.value = '';
 
-    // ── Press 5: show category grid ──
+    // ── Press 5: part / product search ──
     if (trimmed === '5') {
       addBubble('5', 'user');
       addBubble(
-        'Welcome to KJ Appliance Parts! 🛒\n' +
+        'Welcome to KJ Appliance Parts! 🔍\n' +
         'KJRID is your Appliance Parts Dealer — A Partner with Encompass.\n\n' +
-        'Please log into www.encompass.com or create an account first.\n\n' +
-        'Select a product category below:',
+        'Enter a part number or product name below and I\'ll find it for you right away!',
         'bunji'
       );
-      renderCategoryGrid();
+      renderPartSearchPrompt();
+      return;
+    }
+
+    // ── Waiting for a part search query ──
+    if (awaitingPartSearch) {
+      awaitingPartSearch = false;
+      addBubble(trimmed, 'user');
+      doPartSearch(trimmed);
       return;
     }
 

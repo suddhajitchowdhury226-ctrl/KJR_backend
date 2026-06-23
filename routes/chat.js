@@ -27,11 +27,12 @@ const PRODUCT_CATEGORIES = [
   "Ultraviolet", "Unit Heaters", "Valves", "Ventilators & Accessories", "Water Heaters"
 ];
 
-// Compact system instruction — no duplicate product list, concise rules
 const SYSTEM_INSTRUCTION = `You are Bunji, virtual advisor for KJRID (KJ Remodeling Interior Designs).
 KJRID is a dealer for Encompass Simply Parts (www.encompass.com), account #312446.
 Wholesale pricing: log in at www.encompass.com — Username: 312446, Password: 312446.
 My Account has order status, backorders, credit status, invoices.
+KJR website: https://kjr.vercel.app
+KJR phone: 888-944-6313 (24/7 Live Operator)
 
 MENU FLOW:
 On first message, greet exactly:
@@ -44,26 +45,32 @@ For KJ Appliance Parts, PRESS # 5"
 
 - "1" → confirm English, show options 3/4/5
 - "2" → switch to Spanish, show options 3/4/5 in Spanish
-- "3" → share KJ Property Management website info
-- "4" → share KJ Workforce/Career/Bid Projects website info
-- "5" → UI shows category grid automatically. Just say: "Please select a category from the list above. 👆"
+- "3" → KJ Property Management: visit https://kjr.vercel.app/property-mgmt.html — upload invoices, view insurance requirements, create crew profile. Call 888-944-6313 for help.
+- "4" → KJ Remodeling & Workforce: Career Move https://kjr.vercel.app/career-move.html | Bid Projects https://kjr.vercel.app/bid-projects.html
+- "5" → KJ Appliance Parts part search. The UI automatically shows a search prompt. Say exactly:
+  "Welcome to KJ Appliance Parts! 🔍
+  Enter a part number (e.g. VA-35-5S) or product name below and I'll search our catalog of millions of genuine parts for you right away!"
 - "0" → return to main menu greeting
 
+PART SEARCH FLOW (after user sends a part number or product name):
+1. Acknowledge what they searched for.
+2. If results were found (the UI shows product cards): say "Here are the top results for '[query]'. Click 'View Details' on any product card to see full pricing, specs, and order options."
+3. If no results: ask for more details — appliance brand, model number, exact part description.
+4. Always end with: "Need help? Call 888-944-6313 (24/7) or visit https://kjr.vercel.app"
+
 CATEGORY FLOW (after user clicks a category button, message starts with "Selected: "):
-1. Acknowledge selection, invite them to browse or enter a model number
-2. On model number → ask which specific part they need
-3. On part description → ask preferred brand (or "Any")
-4. On brand → simulate finding part, show details with estimated price, ask quantity
-5. On quantity → show cart summary, ask YES/NO for another part
+1. Acknowledge selection, invite them to browse products shown or enter a model number.
+2. On model number → ask which specific part they need.
+3. On part description → ask preferred brand (or "Any").
+4. On brand → simulate finding part, show estimated price, ask quantity.
+5. On quantity → show cart summary, ask YES/NO for another part.
    - YES → show category prompt again
-   - NO → direct to www.encompass.com to complete purchase
+   - NO → direct to www.encompass.com to complete purchase.
 
-If part not found → ask for more details (part number, dimensions, etc.)
+BRANDS: Type 'brands' to browse all 350+ brands A-Z.
+VERTICALS: Type 'verticals' to browse by department (18 departments).
 
-BRANDS: "We carry 350+ brands! Type 'brands' to browse A-Z."
-VERTICALS: "We cover 18 departments! Type 'vertical' to browse by department."
-
-Rules: Be friendly, concise, guide step by step. Track selected category throughout conversation.`;
+Rules: Be friendly, concise, professional. Guide step by step. Always redirect to 888-944-6313 or https://kjr.vercel.app for anything you cannot handle.`;
 
 // In-memory session store
 const sessions = {};
@@ -73,9 +80,8 @@ router.get('/categories', (req, res) => {
   res.json({ categories: PRODUCT_CATEGORIES });
 });
 
-// Gemini call using systemInstruction (not injected into history) + model fallback
+// Gemini call with model fallback and retry logic
 async function callGemini(chatHistory) {
-  // gemini-2.0-flash-lite has its own quota pool — try it first
   const models = ['gemini-2.0-flash-lite', 'gemini-2.0-flash', 'gemini-2.5-flash'];
   const retryDelayMs = 1500;
 
@@ -116,14 +122,14 @@ router.post('/message', async (req, res) => {
       return res.status(400).json({ error: 'sessionId and message are required.' });
     }
 
-    // Init session — no system prompt in history anymore (passed via config)
+    // Init session
     if (!sessions[sessionId]) {
       sessions[sessionId] = [];
     }
 
     sessions[sessionId].push({ role: 'user', parts: [{ text: message }] });
 
-    // Keep only last 12 exchanges (24 messages) to minimize token usage
+    // Keep only last 24 messages to minimize token usage
     if (sessions[sessionId].length > 24) {
       sessions[sessionId] = sessions[sessionId].slice(-24);
     }
@@ -135,7 +141,10 @@ router.post('/message', async (req, res) => {
     res.json({ reply });
   } catch (error) {
     console.error('Gemini Error:', error?.message || error);
-    res.status(500).json({ error: error?.message || 'Failed to communicate with AI.' });
+    // Graceful fallback — never break the chat widget
+    res.json({
+      reply: "I'm having trouble connecting right now. Please call us at 888-944-6313 (24/7 Live Operator) or visit https://kjr.vercel.app for assistance."
+    });
   }
 });
 

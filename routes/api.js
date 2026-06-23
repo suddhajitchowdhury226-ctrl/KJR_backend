@@ -6,6 +6,7 @@ const Project = require('../models/Project');
 const Bid = require('../models/Bid');
 const User = require('../models/User');
 const Product = require('../models/Product');
+const PartInquiry = require('../models/PartInquiry');
 const auth = require('../middleware/auth');
 const nodemailer = require('nodemailer');
 
@@ -550,6 +551,109 @@ router.post('/admin/products/bulk', auth, async (req, res) => {
     const result = await Product.insertMany(docs, { ordered: false });
     res.json({ success: true, inserted: result.length });
   } catch (err) { console.error(err.message); res.status(500).json({ error: err.message }); }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PART INQUIRY ROUTES
+// ─────────────────────────────────────────────────────────────────────────────
+
+// @route   POST api/inquiries
+// @desc    Submit a part inquiry from Bunji chat (public)
+router.post('/inquiries', async (req, res) => {
+  try {
+    const { query, name, email, phone } = req.body;
+    if (!query || !name || !email) {
+      return res.status(400).json({ error: 'query, name and email are required.' });
+    }
+    const inquiry = await new PartInquiry({
+      query: query.trim(),
+      name: name.trim(),
+      email: email.trim(),
+      phone: (phone || '').trim()
+    }).save();
+
+    // Non-fatal email notification
+    try {
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.SMTP_PORT) || 587,
+        secure: false,
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+      });
+      await transporter.sendMail({
+        from: `"KJR Parts Bot" <${process.env.SMTP_USER}>`,
+        to: process.env.NOTIFY_EMAILS || 'estimating@kjrid.com',
+        replyTo: email.trim(),
+        subject: `New Part Inquiry — "${query.trim()}" from ${name.trim()}`,
+        html: `
+          <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #ddd;border-radius:8px;overflow:hidden;">
+            <div style="background:#cc0000;color:#fff;padding:1.2rem 1.75rem;">
+              <h2 style="margin:0;font-size:1.2rem;font-weight:800;">New Part Inquiry — Bunji Chat</h2>
+            </div>
+            <div style="padding:1.5rem 1.75rem;background:#fff;">
+              <table style="width:100%;border-collapse:collapse;font-size:.9rem;">
+                <tr style="background:#f9f9f9;"><td style="padding:.6rem .8rem;font-weight:700;color:#555;width:35%;">Part / Product</td><td style="padding:.6rem .8rem;">${inquiry.query}</td></tr>
+                <tr><td style="padding:.6rem .8rem;font-weight:700;color:#555;">Customer Name</td><td style="padding:.6rem .8rem;">${inquiry.name}</td></tr>
+                <tr style="background:#f9f9f9;"><td style="padding:.6rem .8rem;font-weight:700;color:#555;">Email</td><td style="padding:.6rem .8rem;"><a href="mailto:${inquiry.email}" style="color:#cc0000;">${inquiry.email}</a></td></tr>
+                <tr><td style="padding:.6rem .8rem;font-weight:700;color:#555;">Phone</td><td style="padding:.6rem .8rem;">${inquiry.phone || 'Not provided'}</td></tr>
+                <tr style="background:#f9f9f9;"><td style="padding:.6rem .8rem;font-weight:700;color:#555;">Date</td><td style="padding:.6rem .8rem;">${new Date().toLocaleString()}</td></tr>
+              </table>
+              <p style="margin-top:1.25rem;font-size:.82rem;color:#aaa;border-top:1px solid #eee;padding-top:.75rem;">
+                ID: ${inquiry._id} &bull; KJR Bunji Part Inquiry System
+              </p>
+            </div>
+          </div>`
+      });
+    } catch (emailErr) {
+      console.warn('Part inquiry email failed (inquiry saved):', emailErr.message);
+    }
+
+    res.json({ success: true, id: inquiry._id });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   GET api/admin/inquiries   — all inquiries (admin)
+router.get('/admin/inquiries', auth, async (req, res) => {
+  try {
+    const inquiries = await PartInquiry.find().sort({ createdAt: -1 });
+    res.json(inquiries);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   PUT api/admin/inquiries/:id   — update status / notes (admin)
+router.put('/admin/inquiries/:id', auth, async (req, res) => {
+  try {
+    const { status, adminNotes } = req.body;
+    const inq = await PartInquiry.findById(req.params.id);
+    if (!inq) return res.status(404).json({ error: 'Inquiry not found' });
+    if (status) inq.status = status;
+    if (adminNotes !== undefined) inq.adminNotes = adminNotes;
+    inq.updatedAt = new Date();
+    await inq.save();
+    res.json({ success: true, inquiry: inq });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   DELETE api/admin/inquiries/:id   — delete inquiry (admin)
+router.delete('/admin/inquiries/:id', auth, async (req, res) => {
+  try {
+    const inq = await PartInquiry.findById(req.params.id);
+    if (!inq) return res.status(404).json({ error: 'Inquiry not found' });
+    await inq.deleteOne();
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
 });
 
 module.exports = router;
