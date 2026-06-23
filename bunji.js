@@ -345,6 +345,7 @@
       cursor: pointer; font-size: 24px;
       display: flex; align-items: center; justify-content: center;
       transition: transform 0.3s ease;
+      position: relative;
     }
     #bunji-toggle:hover { transform: scale(1.1); }
 
@@ -529,6 +530,78 @@
     @media (max-width: 420px) {
       #bunji-chat-window { width: calc(100vw - 24px); right: -8px; }
     }
+
+    /* ── Cart bar — floats above the toggle button ── */
+    #bunji-cart-bar {
+      position: absolute;
+      bottom: 75px;
+      right: 0;
+      width: 260px;
+      background: #0f172a;
+      color: #fff;
+      border-radius: 14px;
+      padding: 11px 14px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+      animation: bunjicartIn .25s ease;
+      z-index: 10001;
+      cursor: pointer;
+      border: 1.5px solid #1e293b;
+    }
+    #bunji-cart-bar.visible { display: flex; }
+    @keyframes bunjicartIn {
+      from { opacity:0; transform:translateY(10px) scale(.96); }
+      to   { opacity:1; transform:translateY(0) scale(1); }
+    }
+    #bunji-cart-bar .bc-icon {
+      font-size: 22px; flex-shrink: 0;
+    }
+    #bunji-cart-bar .bc-body {
+      flex: 1; min-width: 0;
+    }
+    #bunji-cart-bar .bc-title {
+      font-size: 11px; font-weight: 700; color: #94a3b8;
+      text-transform: uppercase; letter-spacing: .07em;
+      margin-bottom: 1px;
+    }
+    #bunji-cart-bar .bc-name {
+      font-size: 12.5px; font-weight: 700; color: #fff;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    #bunji-cart-bar .bc-price {
+      font-size: 11.5px; color: #cc0000; font-weight: 700; margin-top: 1px;
+    }
+    #bunji-cart-bar .bc-checkout {
+      background: #cc0000; color: #fff; border: none;
+      border-radius: 8px; padding: 6px 11px;
+      font-size: 11px; font-weight: 700; cursor: pointer;
+      white-space: nowrap; flex-shrink: 0;
+      font-family: 'Inter', Arial, sans-serif;
+      transition: background .15s;
+    }
+    #bunji-cart-bar .bc-checkout:hover { background: #aa0000; }
+    #bunji-cart-bar .bc-close {
+      position: absolute; top: -7px; right: -7px;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: #475569; border: 1.5px solid #0f172a;
+      color: #fff; font-size: 10px; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      line-height: 1;
+    }
+    #bunji-cart-bar .bc-close:hover { background: #cc0000; }
+    /* Badge on the toggle button */
+    #bunji-cart-badge {
+      position: absolute; top: -4px; right: -4px;
+      background: #cc0000; color: #fff;
+      width: 20px; height: 20px; border-radius: 50%;
+      font-size: 10px; font-weight: 800;
+      display: none; align-items: center; justify-content: center;
+      border: 2px solid #fff;
+      pointer-events: none;
+    }
+    #bunji-cart-badge.visible { display: flex; }
   `;
   document.head.appendChild(style);
 
@@ -536,7 +609,19 @@
   const widget = document.createElement('div');
   widget.id = 'bunji-widget';
   widget.innerHTML = `
-    <button id="bunji-toggle">💬</button>
+    <div id="bunji-cart-bar">
+      <div class="bc-close" id="bunji-cart-bar-close">✕</div>
+      <div class="bc-icon">🛒</div>
+      <div class="bc-body">
+        <div class="bc-title">Added to Cart</div>
+        <div class="bc-name" id="bunji-cart-item-name">—</div>
+        <div class="bc-price" id="bunji-cart-item-price"></div>
+      </div>
+      <button class="bc-checkout" id="bunji-cart-checkout-btn">Checkout →</button>
+    </div>
+    <button id="bunji-toggle">💬
+      <span id="bunji-cart-badge"></span>
+    </button>
     <div id="bunji-chat-window">
       <div class="bunji-header">
         <span>🤖 Bunji — Virtual Advisor</span>
@@ -682,6 +767,16 @@
       if (buyBtn.classList.contains('added')) return;
       buyBtn.classList.add('added');
       buyBtn.textContent = '✓ Added';
+
+      // Save to localStorage cart
+      let cart = JSON.parse(localStorage.getItem('kjr_cart') || '[]');
+      const existing = cart.find(c => c.part === product.part);
+      if (existing) { existing.qty += 1; } else { cart.push({ name: product.name, part: product.part, price: priceVal, qty: 1 }); }
+      localStorage.setItem('kjr_cart', JSON.stringify(cart));
+
+      // Show cart bar popup above toggle button
+      showBunjiCartBar(product.name, priceVal);
+
       addBubble(`I want to buy: ${product.name} (Part #${product.part}) — ${priceVal}`, 'user');
       setTimeout(() => {
         addBubble(
@@ -1246,13 +1341,8 @@
     });
 
     if (merged.length === 0) {
-      addBubble(
-        `😔 We couldn't find "${q}" in our catalog right now.\n\n` +
-        `No worries — our executive team will contact you shortly!\n` +
-        `Please leave your details below and we'll source this part for you. 👇`,
-        'bunji'
-      );
-      renderInquiryForm(q);
+      // Auto-submit inquiry silently using logged-in user details
+      autoSubmitInquiry(q);
       return;
     }
 
@@ -1266,149 +1356,40 @@
     renderPartSearchResults(show, q, merged.length);
   }
 
-  // ── Inquiry form — shown when no product is found ────────────────────────
-  function renderInquiryForm(prefillQuery) {
-    // Pre-fill name/email from logged-in user if available
+  // ── Auto-submit inquiry silently — no form shown to user ────────────────
+  async function autoSubmitInquiry(query) {
+    // Pull customer details from logged-in session
     const kjrUser = (() => { try { return JSON.parse(localStorage.getItem('kjr_user') || 'null'); } catch { return null; } })();
+    const name = (kjrUser && (kjrUser.username || kjrUser.name)) || 'Guest';
+    const email = (kjrUser && kjrUser.email) || '';
+    const phone = (kjrUser && kjrUser.phone) || '';
 
-    const wrapper = document.createElement('div');
-    wrapper.className = 'bunji-cat-wrapper';
-    wrapper.style.cssText = 'background:#fff3f3;border:1.5px solid #cc0000;border-radius:8px;border-bottom-left-radius:0;padding:14px;';
-
-    wrapper.innerHTML = `
-      <div style="font-size:12.5px;font-weight:700;color:#cc0000;margin-bottom:10px;">📋 Request This Part — We'll Find It For You</div>
-      <div style="display:flex;flex-direction:column;gap:8px;">
-        <div>
-          <label style="font-size:10px;font-weight:700;color:#64748b;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;">Your Name *</label>
-          <input id="inq-name" type="text" placeholder="Full name"
-            value="${kjrUser ? (kjrUser.username || '') : ''}"
-            style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:12.5px;font-family:'Inter',Arial,sans-serif;box-sizing:border-box;outline:none;">
-        </div>
-        <div>
-          <label style="font-size:10px;font-weight:700;color:#64748b;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;">Email Address *</label>
-          <input id="inq-email" type="email" placeholder="you@example.com"
-            value="${kjrUser ? (kjrUser.email || '') : ''}"
-            style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:12.5px;font-family:'Inter',Arial,sans-serif;box-sizing:border-box;outline:none;">
-        </div>
-        <div>
-          <label style="font-size:10px;font-weight:700;color:#64748b;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;">Phone Number</label>
-          <input id="inq-phone" type="tel" placeholder="555-123-4567"
-            style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:12.5px;font-family:'Inter',Arial,sans-serif;box-sizing:border-box;outline:none;">
-        </div>
-        <div>
-          <label style="font-size:10px;font-weight:700;color:#64748b;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em;">Part / Product You Need *</label>
-          <input id="inq-query" type="text" placeholder="Part number or description"
-            value="${(prefillQuery || '').replace(/"/g, '&quot;')}"
-            style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:12.5px;font-family:'Inter',Arial,sans-serif;box-sizing:border-box;outline:none;">
-        </div>
-        <div id="inq-error" style="display:none;color:#cc0000;font-size:11px;font-weight:600;padding:5px 8px;background:#fff1f1;border-radius:5px;"></div>
-        <button id="inq-submit-btn"
-          style="background:#cc0000;color:#fff;border:none;border-radius:7px;padding:9px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:'Inter',Arial,sans-serif;transition:background .15s;margin-top:2px;">
-          📨 Submit — Our Team Will Contact You
-        </button>
-        <div style="font-size:10px;color:#94a3b8;text-align:center;">Or call us anytime: <strong>888-944-6313</strong> (24/7)</div>
-      </div>
-    `;
-
-    messagesEl.appendChild(wrapper);
+    // Show thank-you message immediately — no waiting
+    addBubble(
+      `😔 We couldn't find "${query}" in our current catalog.\n\n` +
+      `✅ Thank you for visiting!\n` +
+      `Our executive will contact you soon regarding this part.\n\n` +
+      `You can also reach us anytime at 888-944-6313 (24/7 Live Operator).`,
+      'bunji'
+    );
     scrollBottom();
 
-    // Focus first empty required field
-    const nameInput = wrapper.querySelector('#inq-name');
-    const emailInput = wrapper.querySelector('#inq-email');
-    const phoneInput = wrapper.querySelector('#inq-phone');
-    const queryInput = wrapper.querySelector('#inq-query');
-    const errEl = wrapper.querySelector('#inq-error');
-    const submitBtn = wrapper.querySelector('#inq-submit-btn');
+    // Fire-and-forget backend submission
+    const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:5001/api'
+      : 'https://kjr-backend.onrender.com/api';
 
-    // Focus on first empty
-    if (!nameInput.value) nameInput.focus();
-    else if (!emailInput.value) emailInput.focus();
-
-    // Hover style
-    submitBtn.addEventListener('mouseenter', () => { submitBtn.style.background = '#aa0000'; });
-    submitBtn.addEventListener('mouseleave', () => { submitBtn.style.background = '#cc0000'; });
-
-    // Submit
-    submitBtn.addEventListener('click', async () => {
-      const name = nameInput.value.trim();
-      const email = emailInput.value.trim();
-      const phone = phoneInput.value.trim();
-      const query = queryInput.value.trim();
-
-      // Validate
-      errEl.style.display = 'none';
-      if (!name) { errEl.textContent = 'Please enter your name.'; errEl.style.display = 'block'; nameInput.focus(); return; }
-      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        errEl.textContent = 'Please enter a valid email address.'; errEl.style.display = 'block'; emailInput.focus(); return;
-      }
-      if (!query) { errEl.textContent = 'Please describe the part you need.'; errEl.style.display = 'block'; queryInput.focus(); return; }
-
-      // Disable while submitting
-      submitBtn.textContent = 'Sending…';
-      submitBtn.disabled = true;
-
-      const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? 'http://localhost:5001/api'
-        : 'https://kjr-backend.onrender.com/api';
-
-      try {
-        const res = await fetch(`${API_BASE}/inquiries`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query, name, email, phone }),
-          signal: AbortSignal.timeout(15000)
-        });
-        const data = await res.json();
-
-        if (res.ok && data.success) {
-          // Replace form with success message
-          wrapper.innerHTML = `
-            <div style="text-align:center;padding:8px 0;">
-              <div style="font-size:28px;margin-bottom:8px;">✅</div>
-              <div style="font-weight:700;color:#15803d;font-size:13px;margin-bottom:6px;">Request Submitted!</div>
-              <div style="font-size:12px;color:#475569;line-height:1.5;">
-                Thank you, <strong>${name}</strong>! One of our executives will<br>
-                contact you at <strong>${email}</strong> soon.<br><br>
-                In the meantime, you can call us 24/7 at<br>
-                <strong style="color:#cc0000;">888-944-6313</strong>
-              </div>
-            </div>`;
-          wrapper.style.background = '#f0fdf4';
-          wrapper.style.border = '1.5px solid #16a34a';
-          scrollBottom();
-          addBubble(
-            `✅ Got it! Your request for "${query}" has been submitted.\n\n` +
-            `Our executive team will reach out to ${email} shortly.\n\n` +
-            `You can also call us anytime at 888-944-6313 (24/7).\n\n` +
-            `Would you like to search for another part?`,
-            'bunji'
-          );
-          // Show search again button
-          setTimeout(() => renderPartSearchPrompt(), 400);
-        } else {
-          throw new Error(data.error || 'Submission failed');
-        }
-      } catch (err) {
-        // If backend is down, still show success (log to console) and give phone fallback
-        console.warn('Inquiry submit error:', err.message);
-        wrapper.innerHTML = `
-          <div style="text-align:center;padding:8px 0;">
-            <div style="font-size:26px;margin-bottom:8px;">📞</div>
-            <div style="font-weight:700;color:#cc0000;font-size:13px;margin-bottom:6px;">Call Us Directly</div>
-            <div style="font-size:12px;color:#475569;line-height:1.6;">
-              Our system is temporarily offline.<br>
-              Please call us at <strong style="color:#cc0000;">888-944-6313</strong><br>
-              (24/7 Live Operator) and ask for the part:<br>
-              <strong>"${query}"</strong>
-            </div>
-          </div>`;
-        scrollBottom();
-      }
-    });
-
-    // Allow Enter key on last field to submit
-    queryInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitBtn.click(); });
+    try {
+      await fetch(`${API_BASE}/inquiries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, name, email, phone }),
+        signal: AbortSignal.timeout(10000)
+      });
+    } catch (e) {
+      // Silently ignore — user already saw the thank-you message
+      console.warn('Inquiry background submit failed:', e.message);
+    }
   }
 
   // ── Render up to 4 search result cards ────────────────────────────────────
@@ -1744,6 +1725,8 @@
           `Call 888-944-6313 (24/7) to complete your order!`,
           'bunji'
         );
+        // Show cart bar popup above toggle button
+        showBunjiCartBar(p.name, p.price);
         setTimeout(closeBunjiModal, 1200);
       }
     });
@@ -1755,10 +1738,56 @@
       const existing = cart.find(c => c.part === p.part);
       if (existing) { existing.qty += qtyVal; } else { cart.push({ name: p.name, part: p.part, price: p.price, qty: qtyVal }); }
       localStorage.setItem('kjr_cart', JSON.stringify(cart));
+      showBunjiCartBar(p.name, p.price);
       closeBunjiModal();
       window.location.href = 'checkout.html';
     });
   }
+
+  // ─── CART BAR ─────────────────────────────────────────────────────────────
+  let cartBarTimer = null;
+
+  function showBunjiCartBar(productName, productPrice) {
+    const bar = document.getElementById('bunji-cart-bar');
+    const nameEl = document.getElementById('bunji-cart-item-name');
+    const priceEl = document.getElementById('bunji-cart-item-price');
+    const badge = document.getElementById('bunji-cart-badge');
+    if (!bar) return;
+
+    // Update content
+    nameEl.textContent = productName || 'Item';
+    priceEl.textContent = productPrice || '';
+
+    // Update badge count
+    const cart = JSON.parse(localStorage.getItem('kjr_cart') || '[]');
+    const total = cart.reduce((n, c) => n + (c.qty || 1), 0);
+    if (badge) { badge.textContent = total; badge.classList.toggle('visible', total > 0); }
+
+    // Show bar
+    bar.classList.add('visible');
+
+    // Auto-hide after 6 seconds
+    clearTimeout(cartBarTimer);
+    cartBarTimer = setTimeout(() => { bar.classList.remove('visible'); }, 6000);
+  }
+
+  // Wire up cart bar close + checkout buttons — elements exist immediately after appendChild above
+  (function wireBunjiCartBar() {
+    const closeBtn = document.getElementById('bunji-cart-bar-close');
+    const checkoutBtn = document.getElementById('bunji-cart-checkout-btn');
+    const bar = document.getElementById('bunji-cart-bar');
+
+    if (closeBtn) closeBtn.addEventListener('click', (e) => { e.stopPropagation(); clearTimeout(cartBarTimer); bar.classList.remove('visible'); });
+    if (checkoutBtn) checkoutBtn.addEventListener('click', (e) => { e.stopPropagation(); window.location.href = 'checkout.html'; });
+    // Clicking anywhere on bar (except close) also goes to checkout
+    if (bar) bar.addEventListener('click', () => { window.location.href = 'checkout.html'; });
+
+    // Restore badge on page load if cart already has items
+    const savedCart = JSON.parse(localStorage.getItem('kjr_cart') || '[]');
+    const savedTotal = savedCart.reduce((n, c) => n + (c.qty || 1), 0);
+    const badge = document.getElementById('bunji-cart-badge');
+    if (badge && savedTotal > 0) { badge.textContent = savedTotal; badge.classList.add('visible'); }
+  })();
 
   // ─── BOT COMMUNICATION ────────────────────────────────────────────────────
   async function sendToBot(text) {

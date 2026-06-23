@@ -1,12 +1,12 @@
 const mongoose = require('mongoose');
 
 const partInquirySchema = new mongoose.Schema({
-  // What they searched for
+  // What they searched for — always present
   query: { type: String, required: true, trim: true },
 
-  // Customer info (from logged-in user or manually entered in chat form)
-  name: { type: String, required: true, trim: true },
-  email: { type: String, required: true, trim: true },
+  // Customer info — optional (guest users may not be logged in)
+  name: { type: String, default: 'Guest', trim: true },
+  email: { type: String, default: '', trim: true },
   phone: { type: String, default: '', trim: true },
 
   // Status tracking

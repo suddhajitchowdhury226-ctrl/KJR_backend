@@ -562,13 +562,13 @@ router.post('/admin/products/bulk', auth, async (req, res) => {
 router.post('/inquiries', async (req, res) => {
   try {
     const { query, name, email, phone } = req.body;
-    if (!query || !name || !email) {
-      return res.status(400).json({ error: 'query, name and email are required.' });
+    if (!query || !query.trim()) {
+      return res.status(400).json({ error: 'query is required.' });
     }
     const inquiry = await new PartInquiry({
       query: query.trim(),
-      name: name.trim(),
-      email: email.trim(),
+      name: (name || 'Guest').trim(),
+      email: (email || '').trim(),
       phone: (phone || '').trim()
     }).save();
 
